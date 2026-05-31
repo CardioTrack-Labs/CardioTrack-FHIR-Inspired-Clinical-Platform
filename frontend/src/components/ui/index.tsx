@@ -33,11 +33,11 @@ export const CTBtn: React.FC<CTBtnProps> = ({
     nav:       { bg: 'transparent',       color: 'rgba(255,255,255,0.72)', border: 'rgba(255,255,255,0.22)', shadow: 'none' },
   };
   
-  const v = vMap[variant] || vMap.primary;
+  const v = vMap[variant as keyof typeof vMap] || vMap.primary;
   
   return (
     <button
-      type={type}
+      type={type as 'button' | 'submit' | 'reset'}
       onClick={onClick}
       disabled={disabled}
       style={{
@@ -87,7 +87,7 @@ export const CTBadge: React.FC<CTBadgeProps> = ({ label, variant = 'normal' }) =
     failed:   { bg: 'var(--red-bg)',     color: 'var(--red)',     border: 'var(--red-bdr)'   },
   };
   
-  const v = vMap[variant] || vMap.normal;
+  const v = vMap[variant as keyof typeof vMap] || vMap.normal;
   
   return (
     <span
