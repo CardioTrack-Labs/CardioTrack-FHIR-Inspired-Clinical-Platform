@@ -24,6 +24,9 @@ func RegisterRoutes(r *gin.Engine) {
 		{
 			patients := protected.Group("/patients")
 			patientHandler := handlers.NewPatientHandler()
+			obsHandler := handlers.NewObservationHandler()
+			condHandler := handlers.NewConditionHandler()
+			medHandler := handlers.NewMedicationHandler()
 
 			// Admin/Cardiologist can create patients
 			patients.POST("/", middleware.RequireRole("admin", "cardiologist"), patientHandler.CreatePatient)
@@ -33,6 +36,22 @@ func RegisterRoutes(r *gin.Engine) {
 			
 			// Get specific patient (RBAC handled inside middleware + handler)
 			patients.GET("/:id", middleware.RequirePatientAccess(), patientHandler.GetPatient)
+
+			// Sub-routes for clinical data (nested under specific patient)
+			patientData := patients.Group("/:id", middleware.RequirePatientAccess())
+			{
+				patientData.POST("/observations", middleware.RequireRole("doctor", "cardiologist", "admin"), obsHandler.CreateObservation)
+				patientData.GET("/observations", obsHandler.ListObservations)
+				patientData.GET("/observations/:obs_id", obsHandler.GetObservation)
+
+				patientData.POST("/conditions", middleware.RequireRole("doctor", "cardiologist", "admin"), condHandler.CreateCondition)
+				patientData.GET("/conditions", condHandler.ListConditions)
+				patientData.GET("/conditions/:cond_id", condHandler.GetCondition)
+
+				patientData.POST("/medications", middleware.RequireRole("doctor", "cardiologist", "admin"), medHandler.CreateMedication)
+				patientData.GET("/medications", medHandler.ListMedications)
+				patientData.GET("/medications/:med_id", medHandler.GetMedication)
+			}
 		}
 	}
 }
