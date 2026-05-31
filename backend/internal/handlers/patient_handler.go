@@ -92,6 +92,30 @@ func (h *PatientHandler) GetPatient(c *gin.Context) {
 	c.JSON(http.StatusOK, mapPatientToResponse(patient))
 }
 
+// GetMyProfile returns the patient record for the currently logged-in patient user.
+// This endpoint is accessible to all authenticated users (patient role included).
+// It resolves the patient by matching patients.user_id = JWT user_id.
+func (h *PatientHandler) GetMyProfile(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID := userIDVal.(uint)
+
+	patient, err := h.patientRepo.FindByUserID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "No patient profile found for this account"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, mapPatientToResponse(patient))
+}
+
 func (h *PatientHandler) ListPatients(c *gin.Context) {
 	nameSearch := c.Query("name")
 	mrnSearch := c.Query("mrn")

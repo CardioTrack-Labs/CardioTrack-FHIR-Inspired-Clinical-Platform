@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Login } from './pages/Login';
 import { Patients } from './pages/Patients';
 import { Profile } from './pages/Profile';
+import { Portal } from './pages/Portal';
 import { ctApi } from './lib/api';
 import { User } from './types/fhir';
 
@@ -95,16 +96,7 @@ export const App: React.FC = () => {
         />
       )}
       {route.page === 'portal' && (
-        <div style={{ padding: 40, textAlign: 'center' }}>
-          <h2 style={{ fontSize: 20, marginBottom: 16 }}>Patient Portal Screen</h2>
-          <p style={{ color: 'var(--ink-3)', marginBottom: 20 }}>Welcome to your portal!</p>
-          <button 
-            onClick={() => (window as unknown as { ctLogout?: () => void }).ctLogout?.()}
-            style={{ padding: '8px 16px', background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
-          >
-            ↪ Logout
-          </button>
-        </div>
+        <Portal navigate={navigate} currentUser={currentUser} />
       )}
     </div>
   );

@@ -12,18 +12,21 @@ const ROLES = [
     label: 'Ιατρός',
     sub: 'Ασθενείς, vitals, διαγνώσεις',
     email: 'dr.smith@cardiotrack.dev',
+    password: 'doctor123',
   },
   {
     id: 'patient',
     label: 'Ασθενής',
     sub: 'Vitals, φάρμακα, αναφορές',
     email: 'patient1@cardiotrack.dev',
+    password: 'patient123',
   },
   {
     id: 'admin',
     label: 'Διαχειριστής',
     sub: 'Χρήστες, σύστημα, στατιστικά',
     email: 'admin@cardiotrack.dev',
+    password: 'admin123',
   },
 ];
 
@@ -96,13 +99,14 @@ const FormInput: React.FC<FormInputProps> = ({
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [role, setRole] = useState('doctor');
   const [email, setEmail] = useState(ROLES[0].email);
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState(ROLES[0].password);
   const [loading, setLoading] = useState(false);
   const [pwError, setPwError] = useState('');
 
   const selectRole = (r: typeof ROLES[0]) => {
     setRole(r.id);
     setEmail(r.email);
+    setPassword(r.password);
     setPwError('');
   };
 
@@ -362,7 +366,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             }}
           >
             <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>Demo: </span>
-            Χρησιμοποιήστε οποιοδήποτε password. Email προ-συμπληρώνεται ανά ρόλο.
+            Επιλέξτε ρόλο — email &amp; password συμπληρώνονται αυτόματα.
           </div>
 
         </div>
