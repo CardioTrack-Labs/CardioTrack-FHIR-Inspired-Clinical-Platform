@@ -1,0 +1,19 @@
+# CardioTrack — Local Development
+#
+# DB is Supabase (remote). This compose file runs the Go API locally only.
+# Usage:
+#   docker-compose up --build
+#
+# Requires backend/.env to be populated with Supabase DATABASE_URL + JWT secrets.
+
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
+    volumes:
+      # Persist uploads across container restarts (local dev only)
+      - ./backend/uploads:/app/uploads
+    restart: unless-stopped

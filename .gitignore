@@ -1,0 +1,52 @@
+# ─── Environment ─────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ─── Go ──────────────────────────────────────────────────────────────────────
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+backend/server
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ─── React / Node ─────────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+frontend/build/
+frontend/.turbo/
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.venv/
+venv/
+python-service/__pycache__/
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# ─── IDE ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
