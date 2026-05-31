@@ -52,6 +52,28 @@ func RegisterRoutes(r *gin.Engine) {
 				patientData.GET("/medications", medHandler.ListMedications)
 				patientData.GET("/medications/:med_id", medHandler.GetMedication)
 			}
+			
+			adminGroup := protected.Group("/admin", middleware.RequireRole("admin"))
+			{
+				adminHandler := handlers.NewAdminHandler()
+				adminGroup.GET("/users", adminHandler.ListUsers)
+				adminGroup.PATCH("/users/:id/role", adminHandler.ChangeRole)
+				adminGroup.GET("/stats", adminHandler.GetStats)
+			}
 		}
+
+		// TODO(author): Reports (file upload) endpoints go here. Example:
+		// reports := protected.Group("/patients/:id/reports", middleware.RequireRole("doctor", "cardiologist", "admin"))
+		// reports.POST("/", reportHandler.UploadReport)
+		// reports.GET("/", reportHandler.ListReports)
+		
+		// TODO(author): Risk assessment (HEART score, Framingham) endpoints go here. Example:
+		// risks := protected.Group("/patients/:id/risk-assessments", middleware.RequireRole("doctor", "cardiologist"))
+		// risks.POST("/heart", riskHandler.CalculateHeartScore)
+		// risks.POST("/framingham", riskHandler.CalculateFramingham)
+		
+		// TODO(author): ECG & WebSocket endpoints go here. Example:
+		// api.GET("/ws", wsHandler.Connect)
+		// api.POST("/patients/:id/ecg", ecgHandler.UploadAndProcess)
 	}
 }
