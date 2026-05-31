@@ -9,6 +9,7 @@ import (
 	"github.com/AthanasiosChlr/cardiotrack/internal/database"
 	"github.com/AthanasiosChlr/cardiotrack/internal/middleware"
 	"github.com/AthanasiosChlr/cardiotrack/internal/routes"
+	"github.com/AthanasiosChlr/cardiotrack/internal/seed"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,6 +30,9 @@ func main() {
 
 	// Initialize Database and run auto migration
 	database.Connect(cfg.DatabaseURL)
+
+	// Seed database with demo data if empty
+	seed.Run()
 
 	// Register all API routes
 	routes.RegisterRoutes(r)
