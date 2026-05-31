@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:           oklch(99%   0.003 240);
+  --surface:      oklch(96%   0.007 240);
+  --surface-2:    oklch(91.5% 0.011 240);
+  --border:       oklch(87%   0.011 240);
+  --border-s:     oklch(78%   0.018 240);
+
+  --ink:          oklch(15%   0.022 252);
+  --ink-2:        oklch(38%   0.018 245);
+  --ink-3:        oklch(56%   0.012 240);
+
+  --nav:          oklch(19%   0.05  255);
+  --nav-border:   oklch(26%   0.055 255);
+
+  --primary:      oklch(46%   0.19  245);
+  --primary-h:    oklch(40%   0.21  245);
+  --primary-bg:   oklch(95%   0.04  245);
+  --primary-bdr:  oklch(78%   0.11  245);
+
+  --red:          oklch(46%   0.22  25);
+  --red-bg:       oklch(97.5% 0.022 25);
+  --red-bdr:      oklch(80%   0.11  25);
+
+  --green:        oklch(44%   0.17  145);
+  --green-bg:     oklch(97.5% 0.018 145);
+  --green-bdr:    oklch(80%   0.09  145);
+
+  --amber:        oklch(57%   0.17  70);
+  --amber-bg:     oklch(97.5% 0.02  70);
+  --amber-bdr:    oklch(82%   0.1   70);
+
+  --font:   'IBM Plex Sans', system-ui, sans-serif;
+  --mono:   'IBM Plex Mono', monospace;
+  --r:      6px;
+  --r-lg:   10px;
+  --sh:     0 1px 3px oklch(0% 0 0 / .07), 0 1px 2px oklch(0% 0 0 / .04);
+  --sh-md:  0 4px 8px oklch(0% 0 0 / .07), 0 2px 4px oklch(0% 0 0 / .04);
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-s);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-3);
+}
+
+button {
+  font-family: var(--font);
+}
