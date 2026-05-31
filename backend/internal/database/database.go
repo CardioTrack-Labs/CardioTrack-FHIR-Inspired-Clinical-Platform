@@ -14,8 +14,11 @@ var DB *gorm.DB
 func Connect(databaseURL string) {
 	var err error
 
-	// Connect to Postgres
-	DB, err = gorm.Open(postgres.Open(databaseURL), &gorm.Config{
+	// Connect to Postgres with PgBouncer compatibility
+	DB, err = gorm.Open(postgres.New(postgres.Config{
+		DSN:                  databaseURL,
+		PreferSimpleProtocol: true, // Disables implicit prepared statements for Supabase Pooler
+	}), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 
