@@ -9,10 +9,11 @@ export interface User {
 export interface Patient {
   id: number;
   userId: number;
-  dateOfBirth: string;
+  user?: User;
+  date_of_birth: string;
   gender: string;
-  medicalRecordNumber: string;
-  bloodType?: string;
+  medical_record_number: string;
+  blood_type?: string;
   assignedDoctorId?: number;
   assignedDoctor?: User;
   createdAt?: string;
