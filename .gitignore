@@ -23,6 +23,7 @@ frontend/dist/
 frontend/.next/
 frontend/build/
 frontend/.turbo/
+frontend-prototype/
 
 # ─── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
