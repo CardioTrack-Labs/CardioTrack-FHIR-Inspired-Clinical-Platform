@@ -28,6 +28,9 @@ func RegisterRoutes(r *gin.Engine) {
 			condHandler := handlers.NewConditionHandler()
 			medHandler := handlers.NewMedicationHandler()
 
+			// Patient (self) profile — accessible to all authenticated roles
+			patients.GET("/me", patientHandler.GetMyProfile)
+
 			// Admin/Cardiologist can create patients
 			patients.POST("/", middleware.RequireRole("admin", "cardiologist"), patientHandler.CreatePatient)
 			

@@ -145,6 +145,12 @@ class CardioTrackApiClient {
     return await this.request<Patient>(`/patients/${id}`);
   }
 
+  // Returns the patient profile for the currently authenticated patient user.
+  // Uses GET /patients/me — no doctor/admin role required.
+  async getMyPatientProfile(): Promise<Patient> {
+    return await this.request<Patient>('/patients/me');
+  }
+
   // ── Clinical Data Endpoints ─────────────────────────────────────
   async getObservations(patientId: number): Promise<Observation[]> {
     return await this.request<Observation[]>(`/patients/${patientId}/observations`);

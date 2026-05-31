@@ -33,6 +33,8 @@ func main() {
 
 	// Seed database with demo data if empty
 	seed.Run()
+	// Patch rich clinical demo data (observations + medications with correct types)
+	seed.PatchClinicalData()
 
 	// Register all API routes
 	routes.RegisterRoutes(r)
