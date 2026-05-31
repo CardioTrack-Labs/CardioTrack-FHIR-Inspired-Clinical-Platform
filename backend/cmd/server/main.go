@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/AthanasiosChlr/cardiotrack/internal/config"
+	"github.com/AthanasiosChlr/cardiotrack/internal/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,6 +21,9 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+
+	// Initialize Database and run auto migration
+	database.Connect(cfg.DatabaseURL)
 
 	// TODO(author): Routes are registered in internal/routes/router.go (added in Commit 3)
 	// TODO(author): Add RabbitMQ connection + ECG queue publisher (future phase)
