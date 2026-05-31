@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Login } from './pages/Login';
 import { Patients } from './pages/Patients';
+import { Profile } from './pages/Profile';
 import { ctApi } from './lib/api';
 import { User } from './types/fhir';
 
@@ -86,18 +87,12 @@ export const App: React.FC = () => {
         <Patients navigate={navigate} currentUser={currentUser} />
       )}
       
-      {/* Fallbacks for advanced screens (to be migrated in later phases) */}
       {route.page === 'profile' && (
-        <div style={{ padding: 40, textAlign: 'center' }}>
-          <h2 style={{ fontSize: 20, marginBottom: 16 }}>Patient Profile Screen</h2>
-          <p style={{ color: 'var(--ink-3)', marginBottom: 20 }}>Patient ID: {String(route.params.patientId)}</p>
-          <button 
-            onClick={() => navigate('patients')}
-            style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
-          >
-            ← Back to Patient List
-          </button>
-        </div>
+        <Profile
+          patientId={Number(route.params.patientId)}
+          navigate={navigate}
+          currentUser={currentUser}
+        />
       )}
       {route.page === 'portal' && (
         <div style={{ padding: 40, textAlign: 'center' }}>
