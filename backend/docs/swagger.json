@@ -1,0 +1,88 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CardioTrack API",
+    "version": "1.0.0",
+    "description": "API documentation for the CardioTrack FHIR-inspired clinical platform."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api/v1",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate user",
+        "tags": ["Authentication"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "example": "dr.smith@cardiotrack.dev" },
+                  "password": { "type": "string", "example": "doctor123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Successful login" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/patients": {
+      "get": {
+        "summary": "List patients",
+        "tags": ["Patients"],
+        "responses": {
+          "200": { "description": "List of patients" }
+        }
+      },
+      "post": {
+        "summary": "Create a new patient",
+        "tags": ["Patients"],
+        "responses": {
+          "201": { "description": "Patient created successfully" }
+        }
+      }
+    },
+    "/patients/{id}/observations": {
+      "get": {
+        "summary": "List observations for a patient",
+        "tags": ["Clinical Data"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "List of observations" }
+        }
+      }
+    }
+  }
+}
