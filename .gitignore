@@ -51,3 +51,7 @@ ehthumbs.db
 *.swo
 *.sublime-project
 *.sublime-workspace
+
+# ─── Project Brief ────────────────────────────────────────────────────────────
+/docs/CardioTrack_Project_Brief.pdf
+

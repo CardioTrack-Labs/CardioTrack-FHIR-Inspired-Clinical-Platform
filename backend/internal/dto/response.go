@@ -83,3 +83,15 @@ type RiskAssessmentResponse struct {
 	CalculatedAt   time.Time     `json:"calculated_at"`
 }
 
+type ReportResponse struct {
+	ID           uint          `json:"id"`
+	PatientID    uint          `json:"patient_id"`
+	Title        string        `json:"title"`
+	ReportType   string        `json:"report_type"`
+	FileURL      string        `json:"file_url"`
+	UploadedBy   *UserResponse `json:"uploaded_by,omitempty"`
+	ReportDate   time.Time     `json:"report_date"`
+	CreatedAt    time.Time     `json:"created_at"`
+}
+
+
