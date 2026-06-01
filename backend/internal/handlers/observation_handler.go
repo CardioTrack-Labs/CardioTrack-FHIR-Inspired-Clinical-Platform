@@ -116,11 +116,25 @@ func (h *ObservationHandler) GetObservation(c *gin.Context) {
 	c.JSON(http.StatusOK, mapObservationToResponse(obs))
 }
 
-// TODO(author): Implement abnormal value detection for observations.
+// Implement abnormal value detection for observations based on clinical reference ranges.
 // Called from CreateObservation before DB save.
-// See implementation_plan.md for suggested clinical ranges.
 func detectAbnormal(obs *models.Observation) {
-	obs.IsAbnormal = false // stub — always normal until implemented
+	switch obs.Type {
+	case "systolic_bp":
+		obs.IsAbnormal = obs.Value >= 140 || obs.Value < 90
+	case "diastolic_bp":
+		obs.IsAbnormal = obs.Value >= 90 || obs.Value < 60
+	case "heart_rate":
+		obs.IsAbnormal = obs.Value > 100 || obs.Value < 60
+	case "spo2":
+		obs.IsAbnormal = obs.Value < 95
+	case "glucose":
+		obs.IsAbnormal = obs.Value > 140 || obs.Value < 70
+	case "cholesterol":
+		obs.IsAbnormal = obs.Value >= 200
+	default:
+		obs.IsAbnormal = false
+	}
 }
 
 func mapObservationToResponse(obs *models.Observation) dto.ObservationResponse {
