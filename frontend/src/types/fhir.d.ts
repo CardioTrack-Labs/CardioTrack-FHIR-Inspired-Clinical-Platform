@@ -81,3 +81,15 @@ export interface RiskAssessment {
   calculated_at?: string;
 }
 
+export interface Report {
+  id: number;
+  patient_id: number;
+  title: string;
+  report_type: 'ECG' | 'Lab' | 'Imaging' | 'Discharge' | string;
+  file_url: string;
+  uploaded_by?: User;
+  report_date: string;
+  created_at?: string;
+}
+
+

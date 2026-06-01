@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ctApi } from '../lib/api';
-import { User, Patient, Observation, Condition, Medication, ObservationType, RiskAssessment } from '../types/fhir';
+import { User, Patient, Observation, Condition, Medication, ObservationType, RiskAssessment, Report } from '../types/fhir';
 import {
   CTBtn,
   CTBadge,
@@ -477,6 +477,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
   const [medications, setMedications] = useState<Medication[]>([]);
   const [activeTab, setActiveTab] = useState('Overview');
   const [riskAssessments, setRiskAssessments] = useState<RiskAssessment[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -484,6 +485,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
   const [obsModalOpen, setObsModalOpen] = useState(false);
   const [condModalOpen, setCondModalOpen] = useState(false);
   const [medModalOpen, setMedModalOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   // Form Fields State
   const [newObsType, setNewObsType] = useState<ObservationType>('systolic_bp');
@@ -498,6 +500,10 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
   const [newMedDose, setNewMedDose] = useState('');
   const [newMedFreq, setNewMedFreq] = useState('');
 
+  const [newReportTitle, setNewReportTitle] = useState('');
+  const [newReportType, setNewReportType] = useState('Lab');
+  const [newReportFile, setNewReportFile] = useState<File | null>(null);
+
   const [modalLoading, setModalLoading] = useState(false);
 
   useEffect(() => {
@@ -507,12 +513,13 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         setLoading(true);
         setError(null);
 
-        const [pData, oData, cData, mData, rData] = await Promise.all([
+        const [pData, oData, cData, mData, rData, repData] = await Promise.all([
           ctApi.getPatient(patientId),
           ctApi.getObservations(patientId),
           ctApi.getConditions(patientId),
           ctApi.getMedications(patientId),
           ctApi.getRiskAssessments(patientId),
+          ctApi.getReports(patientId),
         ]);
 
         if (active) {
@@ -521,6 +528,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
           setConditions(cData || []);
           setMedications(mData || []);
           setRiskAssessments(rData || []);
+          setReports(repData || []);
         }
       } catch (err: unknown) {
         if (active) {
@@ -658,9 +666,49 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
       setNewMedDose('');
       setNewMedFreq('');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Αποτυχία καταχώρησης Συνταγής.');
+      alert(err instanceof Error ? err.message : 'Αποτυχία καταχώρησης Συναγής.');
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleAddReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReportTitle.trim() || !newReportFile) return;
+    try {
+      setModalLoading(true);
+      const formData = new FormData();
+      formData.append('title', newReportTitle.trim());
+      formData.append('report_type', newReportType);
+      formData.append('file', newReportFile);
+
+      const newRep = await ctApi.uploadReport(patientId, formData);
+      setReports(prev => [newRep, ...prev]);
+
+      setReportModalOpen(false);
+      setNewReportTitle('');
+      setNewReportType('Lab');
+      setNewReportFile(null);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Αποτυχία ανεβάσματος αναφοράς.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const getFileUrl = (url: string) => {
+    if (url.startsWith('http')) return url;
+    const base = (import.meta.env.VITE_API_URL || '').replace('/api/v1', '');
+    return `${base || 'http://localhost:8080'}${url}`;
+  };
+
+  const getReportIcon = (type: string) => {
+    switch (type?.toUpperCase()) {
+      case 'ECG': return '♡';
+      case 'LAB': return '◎';
+      case 'IMAGING': return '⊡';
+      case 'DISCHARGE': return '≡';
+      default: return '🗎';
     }
   };
 
@@ -1192,7 +1240,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
             {activeTab === 'Reports' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <CTBtn label="Upload Report" icon="↑" />
+                  <CTBtn label="Upload Report" icon="↑" onClick={() => setReportModalOpen(true)} />
                 </div>
                 <div
                   style={{
@@ -1201,14 +1249,10 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                     gap: 16,
                   }}
                 >
-                  {[
-                    { title: 'ECG Report', type: 'ECG', date: '12 Μαΐ 2025', size: '1.2 MB', icon: '♡' },
-                    { title: 'Lab Results Q1', type: 'Lab', date: '3 Απρ 2025', size: '340 KB', icon: '◎' },
-                    { title: 'Echocardiography', type: 'Imaging', date: '28 Μαρ 2025', size: '8.4 MB', icon: '⊡' },
-                    { title: 'Discharge Summary', type: 'Discharge', date: '15 Μαρ 2025', size: '520 KB', icon: '≡' },
-                  ].map((r, i) => (
+                  {reports.map((r) => (
                     <div
-                      key={i}
+                      key={r.id}
+                      onClick={() => window.open(getFileUrl(r.file_url), '_blank')}
                       style={{
                         background: 'var(--bg)',
                         border: '1px solid var(--border)',
@@ -1244,14 +1288,18 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                             flexShrink: 0,
                           }}
                         >
-                          {r.icon}
+                          {getReportIcon(r.report_type)}
                         </div>
-                        <CTBadge label={r.type} variant="pending" />
+                        <CTBadge label={r.report_type} variant="pending" />
                       </div>
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 14 }}>{r.title}</div>
                         <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
-                          {r.date} · {r.size}
+                          {new Date(r.report_date).toLocaleDateString('el-GR', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
                         </div>
                       </div>
                       <div
@@ -1262,11 +1310,12 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                           paddingTop: 8,
                         }}
                       >
-                        Ανέβηκε από: Δρ. Νικολάου
+                        Ανέβηκε από: {r.uploaded_by?.name || 'Δρ. Νικολάου'}
                       </div>
                     </div>
                   ))}
                   <div
+                    onClick={() => setReportModalOpen(true)}
                     style={{
                       border: '2px dashed var(--border-s)',
                       borderRadius: 'var(--r-lg)',
@@ -1518,6 +1567,90 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
           <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
             <CTBtn label="Ακύρωση" variant="secondary" onClick={() => setMedModalOpen(false)} disabled={modalLoading} />
             <CTBtn label={modalLoading ? 'Καταχώρηση...' : 'Καταχώρηση'} type="submit" disabled={modalLoading} />
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Upload Report ── */}
+      <Modal isOpen={reportModalOpen} onClose={() => setReportModalOpen(false)} title="Ανέβασμα Κλινικής Αναφοράς">
+        <form onSubmit={handleAddReport}>
+          <FormInput
+            label="Τίτλος Αναφοράς"
+            value={newReportTitle}
+            onChange={e => setNewReportTitle(e.target.value)}
+            placeholder="π.χ. Lab Results Q2"
+            required
+          />
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+              Τύπος Αναφοράς
+            </label>
+            <select
+              value={newReportType}
+              onChange={e => setNewReportType(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                fontSize: 13.5,
+                border: '1px solid var(--border-s)',
+                borderRadius: 'var(--r)',
+                background: 'var(--bg)',
+                color: 'var(--ink)',
+                fontFamily: 'var(--font)',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            >
+              <option value="ECG">ECG Report</option>
+              <option value="Lab">Lab Results</option>
+              <option value="Imaging">Imaging (Echo/MRI)</option>
+              <option value="Discharge">Discharge Summary</option>
+            </select>
+          </div>
+          
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+              Αρχείο Αναφοράς
+            </label>
+            <div
+              style={{
+                border: '2px dashed var(--border-s)',
+                borderRadius: 'var(--r-lg)',
+                padding: '20px',
+                textAlign: 'center',
+                background: 'var(--surface)',
+                cursor: 'pointer',
+                position: 'relative',
+              }}
+            >
+              <input
+                type="file"
+                accept=".pdf,image/*"
+                required
+                onChange={e => setNewReportFile(e.target.files?.[0] || null)}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'pointer',
+                }}
+              />
+              <span style={{ fontSize: 24, display: 'block', marginBottom: 4 }}>🗎</span>
+              <span style={{ fontSize: 13, fontWeight: 500, display: 'block' }}>
+                {newReportFile ? newReportFile.name : 'Επιλέξτε ή σύρετε αρχείο PDF/Εικόνα'}
+              </span>
+              <span style={{ fontSize: 11.5, color: 'var(--ink-3)' }}>
+                {newReportFile ? `${(newReportFile.size / (1024 * 1024)).toFixed(2)} MB` : 'Μέγιστο μέγεθος: 10MB'}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+            <CTBtn label="Ακύρωση" variant="secondary" onClick={() => setReportModalOpen(false)} />
+            <CTBtn label="Ανέβασμα" type="submit" disabled={modalLoading} />
           </div>
         </form>
       </Modal>

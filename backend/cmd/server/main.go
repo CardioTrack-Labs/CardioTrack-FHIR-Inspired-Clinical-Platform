@@ -23,6 +23,9 @@ func main() {
 	// Apply CORS middleware
 	r.Use(middleware.CORSMiddleware(cfg.AllowedOrigins))
 
+	// Serve uploaded clinical files statically
+	r.Static("/uploads", "./uploads")
+
 	// Health check — used by Render and Docker to verify the service is up
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})

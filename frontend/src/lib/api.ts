@@ -1,5 +1,4 @@
-// src/lib/api.ts — CardioTrack API Client
-import { User, Patient, Observation, Condition, Medication, RiskAssessment } from '../types/fhir';
+import { User, Patient, Observation, Condition, Medication, RiskAssessment, Report } from '../types/fhir';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -61,6 +60,10 @@ class CardioTrackApiClient {
     const token = this.getAccessToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (options.body instanceof FormData) {
+      delete headers['Content-Type'];
     }
 
     const config: RequestInit = {
@@ -193,6 +196,17 @@ class CardioTrackApiClient {
     return await this.request<RiskAssessment>(`/patients/${patientId}/risk-assessments`, {
       method: 'POST',
       body: JSON.stringify(assessment),
+    });
+  }
+
+  async getReports(patientId: number): Promise<Report[]> {
+    return await this.request<Report[]>(`/patients/${patientId}/reports`);
+  }
+
+  async uploadReport(patientId: number, formData: FormData): Promise<Report> {
+    return await this.request<Report>(`/patients/${patientId}/reports`, {
+      method: 'POST',
+      body: formData,
     });
   }
 }
