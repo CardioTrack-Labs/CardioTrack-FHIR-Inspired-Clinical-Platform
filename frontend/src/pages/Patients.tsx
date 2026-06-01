@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ctApi } from '../lib/api';
-import { User } from '../types/fhir';
+import { User, Report } from '../types/fhir';
 import { CTBtn, CTBadge, CTAvatar } from '../components/ui';
+import { 
+  Send, 
+  FileText, 
+  Clock, 
+  CheckCircle, 
+  Lock,
+  ArrowRight
+} from 'lucide-react';
 
 interface PatientsProps {
   navigate: (page: string, params?: Record<string, unknown>) => void;
@@ -41,6 +49,609 @@ const NAV_ITEMS = [
   { id: 'reports',  label: 'Αναφορές'  },
   { id: 'settings', label: 'Ρυθμίσεις' },
 ];
+
+// ── 1. Πρόγραμμα (Schedule View) ──────────────────────────────────────
+const ScheduleView: React.FC = () => {
+  const appointments = [
+    { time: '09:00 - 09:30', patient: 'Γεώργιος Παπαδόπουλος', type: 'ECG Analysis Review', room: 'Αίθουσα 3 - Ηλεκτροκαρδιογράφημα', status: 'critical', desc: 'Έλεγχος επιπέδων τροπονίνης και ανάλυση HRV.' },
+    { time: '10:00 - 10:30', patient: 'Ελένη Καρρά', type: 'Outpatient Follow-up', room: 'Εξωτερικά Ιατρεία - Αίθουσα 2', status: 'stable', desc: 'Μετεγχειρητικός έλεγχος HEART Score.' },
+    { time: '11:15 - 12:00', patient: 'Νικόλαος Δημητρίου', type: 'Stress Test (Κόπωση)', room: 'Εργαστήριο Κοπώσεως', status: 'active', desc: 'Υποψία στεφανιαίας νόσου - Δυναμικό τεστ.' },
+    { time: '13:00 - 13:30', patient: 'Μαρία Βασιλείου', type: 'Troponin Serial Review', room: 'ΜΕΘ - Κρεβάτι 3', status: 'critical', desc: 'Παρακολούθηση οξέος στεφανιαίου συνδρόμου.' },
+    { time: '14:30 - 15:00', patient: 'Κωνσταντίνος Παπαδάκης', type: 'Routine Pacemaker Check', room: 'Αίθουσα 5', status: 'stable', desc: 'Εξαμηνιαίος έλεγχος βηματοδότη.' },
+  ];
+
+  return (
+    <div style={{ animation: 'fadeIn 0.2s ease-in-out' }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ink)', letterSpacing: -0.3, margin: 0 }}>
+          Πρόγραμμα Επισκέψεων
+        </h1>
+        <p style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 4 }}>
+          Κλινική ατζέντα καρδιολογικού τμήματος για σήμερα.
+        </p>
+      </div>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {appointments.map((a, i) => {
+          const badgeVariant = a.status === 'critical' ? 'high' : a.status === 'active' ? 'moderate' : 'low';
+          const labelMap: Record<string, string> = {
+            critical: 'Κρίσιμο',
+            active: 'Ενεργό',
+            stable: 'Σταθερό',
+          };
+          return (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+                padding: '16px 20px',
+                background: 'var(--bg)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-lg)',
+                boxShadow: 'var(--sh)',
+                transition: 'all 0.15s',
+              }}
+            >
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--primary)', fontFamily: 'var(--mono)', width: 120, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Clock size={15} /> {a.time}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14.5, color: 'var(--ink)' }}>
+                  {a.patient}
+                  <CTBadge label={labelMap[a.status]} variant={badgeVariant} />
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 4 }}>
+                  <span style={{ fontWeight: 600 }}>{a.type}</span> · {a.room}
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 2 }}>
+                  {a.desc}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ── 2. Μηνύματα (Interactive Clinical Messaging View) ─────────────────
+interface ChatMessage {
+  sender: 'patient' | 'doctor' | 'doctor-colleague';
+  text: string;
+  time: string;
+}
+
+interface MessageThread {
+  id: number;
+  name: string;
+  unread: boolean;
+  lastMsg: string;
+  time: string;
+  status: 'critical' | 'stable' | 'doctor';
+  history: ChatMessage[];
+}
+
+const MessagesView: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
+  // Map thread IDs directly to their seeded database User IDs:
+  // Γεώργιος Παπαδόπουλος = UserID 5, Ελένη Καρρά = UserID 6, Δρ. Καρράς = UserID 4
+  const initialThreads: MessageThread[] = [
+    { id: 5, name: 'Γεώργιος Παπαδόπουλος', unread: true, lastMsg: 'Γιατρέ, ένιωσα ένα ελαφρύ σφίξιμο στο στήθος πριν λίγο.', time: '10:24', status: 'critical', history: [
+      { sender: 'patient', text: 'Καλημέρα γιατρέ. Σας στέλνω γιατί ένιωσα ένα ελαφρύ σφίξιμο στο στήθος πριν από περίπου μία ώρα κατά τη διάρκεια ήπιας βάδισης.', time: '10:20' },
+      { sender: 'doctor', text: 'Καλημέρα Γεώργιε. Το σφίξιμο αντανακλά κάπου αλλού, π.χ. στο αριστερό χέρι ή στην πλάτη; Συνοδεύεται από δύσπνοια ή εφίδρωση;', time: '10:22' },
+      { sender: 'patient', text: 'Όχι, δεν αντανακλά κάπου αλλού. Απλά ένιωσα λίγο σφίξιμο. Τώρα που κάθομαι έχει υποχωρήσει κάπως, αλλά εξακολουθώ να ανησυχώ.', time: '10:24' }
+    ]},
+    { id: 6, name: 'Ελένη Καρρά', unread: false, lastMsg: 'Η πίεση μου σήμερα το πρωί ήταν 122/80. Όλα καλά!', time: 'Χθες', status: 'stable', history: [
+      { sender: 'patient', text: 'Καλησπέρα γιατρέ, πήρα τη δόση του φαρμάκου κανονικά χθες.', time: 'Χθες 18:00' },
+      { sender: 'doctor', text: 'Πολύ καλά Ελένη. Συνέχισε τις πρωινές μετρήσεις πίεσης και ενημέρωσέ με.', time: 'Χθες 18:15' },
+      { sender: 'patient', text: 'Η πίεση μου σήμερα το πρωί ήταν 122/80. Όλα καλά!', time: 'Σήμερα 08:30' }
+    ]},
+    { id: 4, name: 'Δρ. Καρράς (Resident)', unread: false, lastMsg: 'Σας έστειλα το ECG του Patient 3 για review.', time: 'Χθες', status: 'doctor', history: [
+      { sender: 'doctor-colleague', text: 'Καλησπέρα γιατρέ, σας έστειλα το ηλεκτροκαρδιογράφημα του Patient 3. Φαίνεται να έχει μια μικρή κατάσπαση του ST διαστήματος στην V5-V6.', time: 'Χθες 16:30' }
+    ]}
+  ];
+
+  const [threads, setThreads] = useState<MessageThread[]>(initialThreads);
+  const [activeId, setActiveId] = useState(5);
+  const [inputText, setInputText] = useState('');
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+
+  const activeThread = threads.find(t => t.id === activeId) || threads[0];
+
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    // Connect to WebSocket endpoint dynamically
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/^http:\/\/|^https:\/\//, '') : 'localhost:8080';
+    const wsUrl = `${protocol}//${host}/ws?user_id=${currentUser.id}&role=${currentUser.role}`;
+    
+    console.log('[WS Doctor] Connecting to:', wsUrl);
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('[WS Doctor] Connected successfully');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[WS Doctor] Message received:', data);
+        
+        // Dynamic state updates inside matched thread
+        setThreads(prev => prev.map(t => {
+          if (t.id === data.sender_id) {
+            return {
+              ...t,
+              unread: t.id !== activeId,
+              lastMsg: data.text,
+              time: data.time,
+              history: [...t.history, {
+                sender: data.role === 'cardiologist' || data.role === 'doctor' ? 'doctor-colleague' : 'patient',
+                text: data.text,
+                time: data.time
+              }]
+            };
+          }
+          return t;
+        }));
+      } catch (err) {
+        console.error('[WS Doctor] Parse failed:', err);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('[WS Doctor] Disconnected');
+    };
+
+    setSocket(ws);
+
+    return () => {
+      ws.close();
+    };
+  }, [currentUser, activeId]);
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    const timeStr = new Date().toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+    const payload = {
+      sender_id: currentUser?.id,
+      receiver_id: activeThread.id,
+      text: inputText,
+      time: timeStr
+    };
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(payload));
+      console.log('[WS Doctor] Outbound message sent:', payload);
+    }
+
+    setThreads(prev => prev.map(t => {
+      if (t.id === activeId) {
+        return {
+          ...t,
+          unread: false,
+          lastMsg: inputText,
+          time: timeStr,
+          history: [...t.history, {
+            sender: 'doctor',
+            text: inputText,
+            time: timeStr
+          }]
+        };
+      }
+      return t;
+    }));
+    setInputText('');
+  };
+
+  const handleThreadSelect = (id: number) => {
+    setActiveId(id);
+    setThreads(prev => prev.map(t => t.id === id ? { ...t, unread: false } : t));
+  };
+
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', animation: 'fadeIn 0.2s ease-in-out' }}>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ink)', letterSpacing: -0.3, margin: 0 }}>
+          Κλινική Επικοινωνία
+        </h1>
+        <p style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 4 }}>
+          Ανταλλάξτε μηνύματα με ασθενείς ή συναδέλφους ιατρούς.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flex: 1, gap: 20, overflow: 'hidden' }}>
+        {/* Left Column - Thread List */}
+        <div style={{ width: 280, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+          {threads.map(t => {
+            const isSel = t.id === activeId;
+            const initials = t.name.split(' ').map(n => n[0]).join('');
+            return (
+              <button
+                key={t.id}
+                onClick={() => handleThreadSelect(t.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                  padding: 14,
+                  border: 'none',
+                  borderBottom: '1px solid var(--border)',
+                  background: isSel ? 'var(--primary-bg)' : 'transparent',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  width: '100%',
+                  transition: 'all 0.12s',
+                  position: 'relative',
+                }}
+              >
+                {t.unread && (
+                  <span style={{ position: 'absolute', top: 16, right: 14, width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)' }} />
+                )}
+                <CTAvatar initials={initials} size={36} bg={t.status === 'critical' ? 'var(--red-bg)' : 'var(--surface-2)'} color={t.status === 'critical' ? 'var(--red)' : 'var(--ink)'} border={t.status === 'critical' ? 'var(--red-bdr)' : 'var(--border)'} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'var(--mono)' }}>{t.time}</span>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {t.lastMsg}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right Column - Chat Pane */}
+        <div style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          
+          {/* Active Chat Header */}
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--ink)' }}>{activeThread.name}</span>
+              <span style={{ marginLeft: 8 }}>
+                <CTBadge label={activeThread.status === 'critical' ? 'Κρίσιμος' : activeThread.status === 'doctor' ? 'Συνάδελφος' : 'Σταθερός'} variant={activeThread.status === 'critical' ? 'high' : activeThread.status === 'doctor' ? 'pending' : 'normal'} />
+              </span>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>HL7 Patient Consultation Channel</span>
+          </div>
+
+          {/* Message History */}
+          <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {activeThread.history.map((m, i) => {
+              const isDoc = m.sender === 'doctor';
+              return (
+                <div
+                  key={i}
+                  style={{
+                    alignSelf: isDoc ? 'flex-end' : 'flex-start',
+                    maxWidth: '70%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: isDoc ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 'var(--r-lg)',
+                      background: isDoc ? 'var(--primary)' : 'var(--surface-2)',
+                      color: isDoc ? '#fff' : 'var(--ink)',
+                      fontSize: 13.5,
+                      lineHeight: 1.45,
+                      boxShadow: 'var(--sh)',
+                    }}
+                  >
+                    {m.text}
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>
+                    {m.time}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Message Input Form */}
+          <form onSubmit={handleSend} style={{ padding: 14, borderTop: '1px solid var(--border)', display: 'flex', gap: 10, background: 'var(--surface)' }}>
+            <input
+              type="text"
+              placeholder="Πληκτρολογήστε μια απάντηση..."
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '9px 14px',
+                fontSize: 14,
+                border: '1px solid var(--border-s)',
+                borderRadius: 'var(--r)',
+                background: 'var(--bg)',
+                color: 'var(--ink)',
+                outline: 'none',
+              }}
+            />
+            <CTBtn label="" variant="primary" type="submit" icon={<Send size={15} />} />
+          </form>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── 3. Αναφορές (Global Reports Aggregator) ───────────────────────────
+const GlobalReportsView: React.FC<{ patients: MappedPatient[]; navigate: (page: string, params?: Record<string, unknown>) => void }> = ({ patients, navigate }) => {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      setLoading(true);
+      try {
+        const list: Report[] = [];
+        // Sequential request loops to be Supabase-friendly (free pool limit 60)
+        for (const p of patients) {
+          const rList = await ctApi.getReports(p.dbId);
+          list.push(...rList);
+        }
+        // Sort newest uploaded first
+        list.sort((a, b) => new Date(b.report_date).getTime() - new Date(a.report_date).getTime());
+        setReports(list);
+      } catch (err) {
+        console.error('Failed to load global reports:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (patients.length > 0) {
+      fetchAll();
+    } else {
+      setLoading(false);
+    }
+  }, [patients]);
+
+  const getPatientName = (patientId: number): string => {
+    const match = patients.find(p => p.dbId === patientId);
+    return match ? match.name : `Patient ID ${patientId}`;
+  };
+
+  const getPatientMrn = (patientId: number): string => {
+    const match = patients.find(p => p.dbId === patientId);
+    return match ? match.id : '-';
+  };
+
+  return (
+    <div style={{ animation: 'fadeIn 0.2s ease-in-out' }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ink)', letterSpacing: -0.3, margin: 0 }}>
+          Κεντρικό Αρχείο Αναφορών
+        </h1>
+        <p style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 4 }}>
+          Προβολή και λήψη όλων των ιατρικών γνωματεύσεων και εργαστηριακών εξετάσεων από το σύνολο των ασθενών.
+        </p>
+      </div>
+
+      <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--sh)', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13.5 }}>
+          <thead>
+            <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--ink-3)', fontWeight: 600 }}>
+              <th style={{ padding: '12px 16px' }}>Τίτλος Εξέτασης</th>
+              <th style={{ padding: '12px 16px' }}>Κατηγορία</th>
+              <th style={{ padding: '12px 16px' }}>Ασθενής</th>
+              <th style={{ padding: '12px 16px' }}>Ημερομηνία</th>
+              <th style={{ padding: '12px 16px', textAlign: 'right' }}>Ενέργεια</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              [1, 2, 3].map(idx => (
+                <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '14px 16px' }}><div style={{ width: 140, height: 14, background: 'var(--surface)', borderRadius: 2, animation: 'pulse 1.5s infinite' }} /></td>
+                  <td style={{ padding: '14px 16px' }}><div style={{ width: 80, height: 22, background: 'var(--surface)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} /></td>
+                  <td style={{ padding: '14px 16px' }}><div style={{ width: 120, height: 14, background: 'var(--surface)', borderRadius: 2, animation: 'pulse 1.5s infinite' }} /></td>
+                  <td style={{ padding: '14px 16px' }}><div style={{ width: 90, height: 14, background: 'var(--surface)', borderRadius: 2, animation: 'pulse 1.5s infinite' }} /></td>
+                  <td style={{ padding: '14px 16px', textAlign: 'right' }}><div style={{ width: 80, height: 28, background: 'var(--surface)', borderRadius: 'var(--r)', display: 'inline-block', animation: 'pulse 1.5s infinite' }} /></td>
+                </tr>
+              ))
+            ) : reports.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--ink-3)' }}>
+                  Δεν έχουν ανέβει διαγνωστικές αναφορές ακόμα.
+                </td>
+              </tr>
+            ) : (
+              reports.map(r => {
+                const dateStr = new Date(r.report_date).toLocaleDateString('el-GR', { year: 'numeric', month: 'long', day: 'numeric' });
+                const typeVariant = r.report_type === 'ECG' ? 'pending' : r.report_type === 'Lab' ? 'normal' : 'moderate';
+                const fileUrl = r.file_url.startsWith('http') ? r.file_url : `${import.meta.env.VITE_API_URL || ''}${r.file_url}`;
+                
+                return (
+                  <tr key={r.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.1s' }} className="hover:bg-slate-50/50">
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--ink)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <FileText size={16} style={{ color: 'var(--ink-3)' }} />
+                        {r.title}
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <CTBadge label={r.report_type} variant={typeVariant} />
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ fontWeight: 500, color: 'var(--ink-2)' }}>{getPatientName(r.patient_id)}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--ink-3)', fontFamily: 'var(--mono)', marginTop: 1 }}>{getPatientMrn(r.patient_id)}</div>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: 'var(--ink-3)' }}>{dateStr}</td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <CTBtn 
+                          label="Προφίλ" 
+                          variant="secondary" 
+                          size="sm" 
+                          icon={<ArrowRight size={13} />} 
+                          onClick={() => navigate('profile', { patientId: r.patient_id })}
+                        />
+                        <a href={fileUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                          <CTBtn label="Λήψη" variant="ghost" size="sm" />
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ── 4. Ρυθμίσεις (Settings View) ──────────────────────────────────────
+const SettingsView: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
+  const [vitalsAlerts, setVitalsAlerts] = useState(true);
+  const [maceReports, setMaceReports] = useState(false);
+  const [fhirSync, setFhirSync] = useState(true);
+  const [saved, setSaved] = useState(false);
+
+  const roleLabelMap: Record<string, string> = {
+    doctor: 'Ιατρός',
+    cardiologist: 'Καρδιολόγος',
+    admin: 'Διαχειριστής',
+    patient: 'Ασθενής',
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const toggleStyle = (on: boolean) => ({
+    width: 38,
+    height: 20,
+    borderRadius: 10,
+    background: on ? 'var(--primary)' : 'var(--border-s)',
+    position: 'relative' as const,
+    cursor: 'pointer',
+    border: 'none',
+    outline: 'none',
+    transition: 'background 0.2s',
+    padding: 0,
+  });
+
+  const toggleKnobStyle = (on: boolean) => ({
+    width: 14,
+    height: 14,
+    borderRadius: '50%',
+    background: '#fff',
+    position: 'absolute' as const,
+    top: 3,
+    left: on ? 21 : 3,
+    transition: 'left 0.2s',
+  });
+
+  return (
+    <div style={{ animation: 'fadeIn 0.2s ease-in-out' }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ink)', letterSpacing: -0.3, margin: 0 }}>
+          Ρυθμίσεις Συστήματος
+        </h1>
+        <p style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 4 }}>
+          Διαμορφώστε τις προτιμήσεις του κλινικού σας λογαριασμού και τις ειδοποιήσεις.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 600 }}>
+        {/* Profile Card */}
+        <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '20px 24px', boxShadow: 'var(--sh)', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <CTAvatar initials={currentUser ? currentUser.name.split(' ').map(n => n[0]).join('') : 'ΝΙ'} size={48} />
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>{currentUser ? currentUser.name : 'Δρ. Νικολάου'}</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>{currentUser ? currentUser.email : 'dr.smith@cardiotrack.dev'}</span>
+              <CTBadge label={roleLabelMap[currentUser?.role || 'doctor']} variant={currentUser?.role === 'cardiologist' ? 'chronic' : 'pending'} />
+            </div>
+          </div>
+        </div>
+
+        {/* Configurations Form */}
+        <form onSubmit={handleSave} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px', boxShadow: 'var(--sh)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: 0.6, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+            Κλινικές Ειδοποιήσεις
+          </div>
+
+          {/* Toggle 1 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1, paddingRight: 16 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Ειδοποιήσεις Κρίσιμων Τιμών</h4>
+              <p style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 2 }}>
+                Να εμφανίζονται toast alerts στο UI όταν καταγράφονται observations (BP, SpO2) εκτός φυσιολογικών ορίων.
+              </p>
+            </div>
+            <button type="button" onClick={() => setVitalsAlerts(!vitalsAlerts)} style={toggleStyle(vitalsAlerts)}>
+              <span style={toggleKnobStyle(vitalsAlerts)} />
+            </button>
+          </div>
+
+          {/* Toggle 2 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1, paddingRight: 16 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Αυτόματη Αποστολή MACE Reports</h4>
+              <p style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 2 }}>
+                Αποστολή αυτόματων αναφορών με email για ασθενείς με υψηλό κίνδυνο (HEART score ≥ 7).
+              </p>
+            </div>
+            <button type="button" onClick={() => setMaceReports(!maceReports)} style={toggleStyle(maceReports)}>
+              <span style={toggleKnobStyle(maceReports)} />
+            </button>
+          </div>
+
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: 0.6, borderBottom: '1px solid var(--border)', paddingBottom: 8, marginTop: 10 }}>
+            Διαλειτουργικότητα (Interoperability)
+          </div>
+
+          {/* Toggle 3 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1, paddingRight: 16 }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>HL7 FHIR R4 Auto-Sync</h4>
+              <p style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 2 }}>
+                Αυτόματος συγχρονισμός όλων των καταχωρήσεων με τον κεντρικό FHIR R4 server.
+              </p>
+            </div>
+            <button type="button" onClick={() => setFhirSync(!fhirSync)} style={toggleStyle(fhirSync)}>
+              <span style={toggleKnobStyle(fhirSync)} />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 10 }}>
+            <div style={{ fontSize: 13, color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Lock size={14} /> Security: TLS 1.3 Active
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {saved && (
+                <span style={{ fontSize: 13, color: 'var(--green)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle size={15} /> Αποθηκεύτηκε!
+                </span>
+              )}
+              <CTBtn label="Αποθήκευση" type="submit" variant="primary" />
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  );
+};
+
 
 // ── NavBar ─────────────────────────────────────────────────
 interface NavBarProps {
@@ -115,9 +726,10 @@ interface DocNavProps {
   active: string;
   currentUser: User | null;
   navigate?: (page: string, params?: Record<string, unknown>) => void;
+  onChangeTab?: (tab: string) => void;
 }
 
-const DocNav: React.FC<DocNavProps> = ({ active, currentUser, navigate }) => {
+const DocNav: React.FC<DocNavProps> = ({ active, currentUser, navigate, onChangeTab }) => {
   const label = currentUser ? currentUser.name : 'Δρ. Νικολάου';
   return (
     <div
@@ -149,6 +761,7 @@ const DocNav: React.FC<DocNavProps> = ({ active, currentUser, navigate }) => {
         return (
           <button
             key={item.id}
+            onClick={() => onChangeTab?.(item.id)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -617,6 +1230,7 @@ const PatientTable: React.FC<PatientTableProps> = ({ patients, navigate }) => {
 
 // ── Patients Dashboard Page ───────────────────────────────────
 export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => {
+  const [activeTab, setActiveTab] = useState('patients');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('Όλοι');
   const [sort,   setSort]   = useState('lastObs');
@@ -779,37 +1393,48 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
       <NavBar alertCount={totalAlerts} currentUser={currentUser} />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <DocNav active="patients" currentUser={currentUser} navigate={navigate} />
+        <DocNav active={activeTab} currentUser={currentUser} navigate={navigate} onChangeTab={setActiveTab} />
         <main style={{ flex: 1, overflow: 'auto', padding: '28px 32px' }}>
-          <div style={{ marginBottom: 24 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ink)', letterSpacing: -0.3, margin: 0 }}>
-              Ασθενείς μου
-            </h1>
-            <p style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 4 }}>
-              {currentUser ? currentUser.name : 'Δρ. Νικολάου'} ·{' '}
-              {currentUser
-                ? currentUser.role === 'cardiologist'
-                  ? 'Καρδιολόγος'
-                  : 'Ιατρός'
-                : 'Καρδιολόγος'}{' '}
-              · {patients.length} ασθενείς υπό παρακολούθηση
-            </p>
-          </div>
-          <StatsStrip patients={patients} />
-          <Toolbar
-            search={search}
-            onSearch={setSearch}
-            filter={filter}
-            onFilter={setFilter}
-            sort={sort}
-            onSort={setSort}
-          />
-          <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 10 }}>
-            {filtered.length === patients.length
-              ? `${patients.length} ασθενείς`
-              : `${filtered.length} από ${patients.length} ασθενείς`}
-          </div>
-          <PatientTable patients={filtered} navigate={navigate} />
+          
+          {activeTab === 'patients' && (
+            <>
+              <div style={{ marginBottom: 24 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ink)', letterSpacing: -0.3, margin: 0 }}>
+                  Ασθενείς μου
+                </h1>
+                <p style={{ fontSize: 13.5, color: 'var(--ink-3)', marginTop: 4 }}>
+                  {currentUser ? currentUser.name : 'Δρ. Νικολάου'} ·{' '}
+                  {currentUser
+                    ? currentUser.role === 'cardiologist'
+                      ? 'Καρδιολόγος'
+                      : 'Ιατρός'
+                    : 'Καρδιολόγος'}{' '}
+                  · {patients.length} ασθενείς υπό παρακολούθηση
+                </p>
+              </div>
+              <StatsStrip patients={patients} />
+              <Toolbar
+                search={search}
+                onSearch={setSearch}
+                filter={filter}
+                onFilter={setFilter}
+                sort={sort}
+                onSort={setSort}
+              />
+              <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 10 }}>
+                {filtered.length === patients.length
+                  ? `${patients.length} ασθενείς`
+                  : `${filtered.length} από ${patients.length} ασθενείς`}
+              </div>
+              <PatientTable patients={filtered} navigate={navigate} />
+            </>
+          )}
+
+          {activeTab === 'schedule' && <ScheduleView />}
+          {activeTab === 'messages' && <MessagesView currentUser={currentUser} />}
+          {activeTab === 'reports' && <GlobalReportsView patients={patients} navigate={navigate} />}
+          {activeTab === 'settings' && <SettingsView currentUser={currentUser} />}
+
         </main>
       </div>
     </div>

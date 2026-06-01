@@ -10,6 +10,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ctApi } from '../lib/api';
 import { User, Patient, Observation, Medication, Condition, Report } from '../types/fhir';
 import { CTAvatar, CTBadge } from '../components/ui';
+import { Send, MessageSquare } from 'lucide-react';
 
 // ── Props ─────────────────────────────────────────────────────
 interface PortalProps {
@@ -40,7 +41,7 @@ function doctorInitials(name: string): string {
     .toUpperCase();
 }
 
-const PORTAL_TABS = ['Αρχική', 'Vitals', 'Φάρμακα', 'Ραντεβού', 'Αναφορές'] as const;
+const PORTAL_TABS = ['Αρχική', 'Vitals', 'Φάρμακα', 'Ραντεβού', 'Μηνύματα', 'Αναφορές'] as const;
 type PortalTab = typeof PORTAL_TABS[number];
 
 // ── SVG Sparkline ─────────────────────────────────────────────
@@ -735,6 +736,294 @@ const PortalSkeleton: React.FC = () => (
   </div>
 );
 
+// ── Tab: Μηνύματα (Clinical Chat) ─────────────────────────────
+interface PortalMessagesTabProps {
+  patient: Patient | null;
+  currentUser: User | null;
+}
+
+const PortalMessagesTab: React.FC<PortalMessagesTabProps> = ({ patient, currentUser }) => {
+  const doctorId = patient?.assignedDoctor?.id || patient?.assignedDoctorId || 2;
+  const doctorName = patient?.assignedDoctor?.name || 'Δρ. Smith';
+  const doctorRole = patient?.assignedDoctor?.role || 'doctor';
+  
+  const drInitials = doctorName
+    .split(' ')
+    .filter(Boolean)
+    .slice(-2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase();
+
+  const getInitialMessages = () => {
+    if (currentUser?.id === 5) {
+      return [
+        { sender: 'patient' as const, text: 'Καλημέρα γιατρέ. Σας στέλνω γιατί ένιωσα ένα ελαφρύ σφίξιμο στο στήθος πριν από περίπου μία ώρα κατά τη διάρκεια ήπιας βάδισης.', time: '10:20' },
+        { sender: 'doctor' as const, text: 'Καλημέρα Γεώργιε. Το σφίξιμο αντανακλά κάπου αλλού, π.χ. στο αριστερό χέρι ή στην πλάτη; Συνοδεύεται από δύσπνοια ή εφίδρωση;', time: '10:22' },
+        { sender: 'patient' as const, text: 'Όχι, δεν αντανακλά κάπου αλλού. Απλά ένιωσα λίγο σφίξιμο. Τώρα που κάθομαι έχει υποχωρήσει κάπως, αλλά εξακολουθώ να ανησυχώ.', time: '10:24' }
+      ];
+    }
+    return [
+      { sender: 'doctor' as const, text: `Καλημέρα! Είμαι ο/η ${doctorName}, ο προσωπικός σας ιατρός. Πώς μπορώ να σας βοηθήσω σήμερα;`, time: '09:00' }
+    ];
+  };
+
+  const [messages, setMessages] = useState<Array<{ sender: 'patient' | 'doctor'; text: string; time: string }>>(getInitialMessages);
+  const [inputText, setInputText] = useState('');
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const chatEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/^http:\/\/|^https:\/\//, '') : 'localhost:8080';
+    const wsUrl = `${protocol}//${host}/ws?user_id=${currentUser.id}&role=${currentUser.role}`;
+
+    console.log('[WS Patient] Connecting to:', wsUrl);
+    setWsStatus('connecting');
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('[WS Patient] Connected successfully');
+      setWsStatus('connected');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[WS Patient] Message received:', data);
+
+        // Ensure the message is from our assigned doctor
+        if (data.sender_id === doctorId) {
+          setMessages(prev => [
+            ...prev,
+            {
+              sender: 'doctor',
+              text: data.text,
+              time: data.time || new Date().toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
+        }
+      } catch (err) {
+        console.error('[WS Patient] Parse failed:', err);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('[WS Patient] Disconnected');
+      setWsStatus('disconnected');
+    };
+
+    ws.onerror = (err) => {
+      console.error('[WS Patient] Socket error:', err);
+      setWsStatus('disconnected');
+    };
+
+    setSocket(ws);
+
+    return () => {
+      ws.close();
+    };
+  }, [currentUser, doctorId]);
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    const timeStr = new Date().toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+    const payload = {
+      sender_id: currentUser?.id,
+      receiver_id: doctorId,
+      text: inputText,
+      time: timeStr
+    };
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(payload));
+      console.log('[WS Patient] Outbound message sent:', payload);
+    }
+
+    setMessages(prev => [
+      ...prev,
+      {
+        sender: 'patient',
+        text: inputText,
+        time: timeStr
+      }
+    ]);
+    setInputText('');
+  };
+
+  const getStatusColor = () => {
+    if (wsStatus === 'connected') return 'var(--green)';
+    if (wsStatus === 'connecting') return 'var(--amber)';
+    return 'var(--ink-3)';
+  };
+
+  const getStatusLabel = () => {
+    if (wsStatus === 'connected') return 'Σε σύνδεση';
+    if (wsStatus === 'connecting') return 'Σύνδεση...';
+    return 'Αποσυνδεδεμένος';
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)', animation: 'fadeIn 0.2s ease-in-out' }}>
+      
+      {/* Active Doctor Header */}
+      <div style={{
+        padding: '14px 20px',
+        border: '1px solid var(--border)',
+        borderBottom: 'none',
+        borderRadius: 'var(--r-lg) var(--r-lg) 0 0',
+        background: 'var(--surface)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: 'var(--sh)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <CTAvatar initials={drInitials || 'ΔΡ'} size={38} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--ink)' }}>{doctorName}</span>
+              <CTBadge
+                label={doctorRole === 'cardiologist' ? 'Καρδιολόγος' : 'Θεράπων Ιατρός'}
+                variant={doctorRole === 'cardiologist' ? 'chronic' : 'pending'}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: getStatusColor(),
+                display: 'inline-block'
+              }} />
+              <span style={{ fontSize: 11.5, color: 'var(--ink-3)' }}>{getStatusLabel()}</span>
+            </div>
+          </div>
+        </div>
+        <span style={{ fontSize: 12, color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <MessageSquare size={13} /> Απευθείας κανάλι επικοινωνίας
+        </span>
+      </div>
+
+      {/* Chat Messages Panel */}
+      <div style={{
+        flex: 1,
+        border: '1px solid var(--border)',
+        background: 'var(--bg)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        boxShadow: 'var(--sh)'
+      }}>
+        
+        {/* Scrollable Message History */}
+        <div style={{
+          flex: 1,
+          padding: 20,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14
+        }}>
+          {messages.map((m, i) => {
+            const isPatient = m.sender === 'patient';
+            return (
+              <div
+                key={i}
+                style={{
+                  alignSelf: isPatient ? 'flex-end' : 'flex-start',
+                  maxWidth: '70%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: isPatient ? 'flex-end' : 'flex-start',
+                  animation: 'fadeIn 0.15s ease-out'
+                }}
+              >
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 'var(--r-lg)',
+                    background: isPatient ? 'var(--primary)' : 'var(--surface-2)',
+                    color: isPatient ? '#fff' : 'var(--ink)',
+                    fontSize: 13.5,
+                    lineHeight: 1.45,
+                    boxShadow: 'var(--sh)',
+                  }}
+                >
+                  {m.text}
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>
+                  {m.time}
+                </span>
+              </div>
+            );
+          })}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Form Input */}
+        <form onSubmit={handleSend} style={{
+          padding: 14,
+          borderTop: '1px solid var(--border)',
+          display: 'flex',
+          gap: 10,
+          background: 'var(--surface)'
+        }}>
+          <input
+            type="text"
+            placeholder="Πληκτρολογήστε ένα μήνυμα για τον ιατρό σας..."
+            value={inputText}
+            onChange={e => setInputText(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '9px 14px',
+              fontSize: 14,
+              border: '1px solid var(--border-s)',
+              borderRadius: 'var(--r)',
+              background: 'var(--bg)',
+              color: 'var(--ink)',
+              outline: 'none',
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '8px 16px',
+              background: 'var(--primary)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--r)',
+              cursor: 'pointer',
+              fontSize: 13.5,
+              fontWeight: 600,
+              gap: 6,
+              transition: 'background 0.15s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'oklch(from var(--primary) calc(l - 0.05) c h)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--primary)'}
+          >
+            <Send size={14} /> Αποστολή
+          </button>
+        </form>
+
+      </div>
+    </div>
+  );
+};
+
 // ── Main Portal Component ─────────────────────────────────────
 export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser }) => {
   const [activeTab, setActiveTab] = useState<PortalTab>('Αρχική');
@@ -862,6 +1151,9 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
             )}
             {activeTab === 'Ραντεβού' && (
               <PortalAppointmentsTab doctorName={doctorName} />
+            )}
+            {activeTab === 'Μηνύματα' && (
+              <PortalMessagesTab patient={patient} currentUser={currentUser} />
             )}
             {activeTab === 'Αναφορές' && (
               <PortalReportsTab conditions={conditions} reports={reports} />
