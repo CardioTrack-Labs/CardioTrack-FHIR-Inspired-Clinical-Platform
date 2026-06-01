@@ -162,7 +162,13 @@ class CardioTrackApiClient {
   async createObservation(patientId: number, type: string, value: number, unit: string, notes: string = ''): Promise<Observation> {
     return await this.request<Observation>(`/patients/${patientId}/observations`, {
       method: 'POST',
-      body: JSON.stringify({ type, value, unit, notes }),
+      body: JSON.stringify({
+        type,
+        value,
+        unit,
+        notes,
+        recorded_at: new Date().toISOString(),
+      }),
     });
   }
 

@@ -76,7 +76,7 @@ interface NavBarProps {
 }
 
 const PortalNavBar: React.FC<NavBarProps> = ({ patient, onLogout }) => {
-  const doctorName = patient?.assignedDoctor?.name ?? '—';
+  const doctorName = patient?.assigned_doctor?.name ?? '—';
   const patientName = patient?.user?.name ?? '';
   const initials = patientName
     .split(' ')
@@ -182,7 +182,7 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
   const latest: Record<string, Observation> = {};
   for (const obs of observations) {
     const existing = latest[obs.type];
-    if (!existing || new Date(obs.recordedAt) > new Date(existing.recordedAt)) {
+    if (!existing || new Date(obs.recorded_at) > new Date(existing.recorded_at)) {
       latest[obs.type] = obs;
     }
   }
@@ -192,7 +192,7 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
   const sys = latest['systolic_bp'];
   const dia = latest['diastolic_bp'];
   if (sys && dia) {
-    const abn = sys.isAbnormal || dia.isAbnormal;
+    const abn = sys.is_abnormal || dia.is_abnormal;
     cards.push({
       label: 'Πίεση αίματος',
       value: `${Math.round(sys.value)}/${Math.round(dia.value)}`,
@@ -208,8 +208,8 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
       label: 'Καρδιακοί παλμοί',
       value: String(Math.round(hr.value)),
       unit: 'bpm',
-      status: hr.isAbnormal ? 'abnormal' : 'normal',
-      note: hr.isAbnormal ? 'Μη φυσιολογικοί' : 'Φυσιολογικοί',
+      status: hr.is_abnormal ? 'abnormal' : 'normal',
+      note: hr.is_abnormal ? 'Μη φυσιολογικοί' : 'Φυσιολογικοί',
     });
   }
 
@@ -219,8 +219,8 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
       label: 'Κορεσμός οξυγόνου',
       value: String(Math.round(spo2.value)),
       unit: '%',
-      status: spo2.isAbnormal ? 'abnormal' : 'normal',
-      note: spo2.isAbnormal ? 'Χαμηλός' : 'Φυσιολογικός',
+      status: spo2.is_abnormal ? 'abnormal' : 'normal',
+      note: spo2.is_abnormal ? 'Χαμηλός' : 'Φυσιολογικός',
     });
   }
 
@@ -230,8 +230,8 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
       label: 'Γλυκόζη',
       value: String(Math.round(gluc.value)),
       unit: 'mg/dL',
-      status: gluc.isAbnormal ? 'elevated' : 'normal',
-      note: gluc.isAbnormal ? 'Αυξημένη' : 'Φυσιολογική',
+      status: gluc.is_abnormal ? 'elevated' : 'normal',
+      note: gluc.is_abnormal ? 'Αυξημένη' : 'Φυσιολογική',
     });
   }
 
@@ -254,7 +254,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   patient, vitals, bpTrend, latestBP, medications, medState, setMedState, onTabChange,
 }) => {
   const patientFirstName = patient?.user?.name?.split(' ')[0] ?? '';
-  const doctorName = patient?.assignedDoctor?.name ?? '—';
+  const doctorName = patient?.assigned_doctor?.name ?? '—';
   const morningMeds = medications.filter(m => m.frequency?.toLowerCase().includes('morning') || m.frequency?.toLowerCase().includes('πρωί') || m.frequency?.toLowerCase().includes('πρωινή'));
   // Fallback: if no freq info, show first half as morning
   const displayMorning = morningMeds.length > 0 ? morningMeds : medications.slice(0, Math.ceil(medications.length / 2));
@@ -743,9 +743,9 @@ interface PortalMessagesTabProps {
 }
 
 const PortalMessagesTab: React.FC<PortalMessagesTabProps> = ({ patient, currentUser }) => {
-  const doctorId = patient?.assignedDoctor?.id || patient?.assignedDoctorId || 2;
-  const doctorName = patient?.assignedDoctor?.name || 'Δρ. Smith';
-  const doctorRole = patient?.assignedDoctor?.role || 'doctor';
+  const doctorId = patient?.assigned_doctor?.id || patient?.assigned_doctor_id || 2;
+  const doctorName = patient?.assigned_doctor?.name || 'Δρ. Smith';
+  const doctorRole = patient?.assigned_doctor?.role || 'doctor';
   
   const drInitials = doctorName
     .split(' ')
@@ -1083,14 +1083,14 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
   const bpTrend = useMemo(() => {
     const sysObs = observations
       .filter(o => o.type === 'systolic_bp')
-      .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+      .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
     return sysObs.slice(-14).map(o => Math.round(o.value));
   }, [observations]);
 
   const diaTrend = useMemo(() => {
     const diaObs = observations
       .filter(o => o.type === 'diastolic_bp')
-      .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+      .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
     return diaObs.slice(-14).map(o => Math.round(o.value));
   }, [observations]);
 
@@ -1099,7 +1099,7 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
     return `${bpTrend[bpTrend.length - 1]}/${diaTrend[diaTrend.length - 1]}`;
   }, [bpTrend, diaTrend]);
 
-  const doctorName = patient?.assignedDoctor?.name ?? '—';
+  const doctorName = patient?.assigned_doctor?.name ?? '—';
 
   const handleLogout = () => {
     (window as unknown as { ctLogout?: () => void }).ctLogout?.();

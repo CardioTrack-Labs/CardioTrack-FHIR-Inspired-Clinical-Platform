@@ -30,7 +30,7 @@ type CreateObservationRequest struct {
 	Type       string  `json:"type" binding:"required"`
 	Value      float64 `json:"value" binding:"required"`
 	Unit       string  `json:"unit" binding:"required"`
-	RecordedAt string  `json:"recorded_at" binding:"required"` // RFC3339
+	RecordedAt string  `json:"recorded_at"` // RFC3339
 	Notes      string  `json:"notes"`
 }
 
