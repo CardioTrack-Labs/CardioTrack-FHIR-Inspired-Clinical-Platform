@@ -513,23 +513,41 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         setLoading(true);
         setError(null);
 
-        const [pData, oData, cData, mData, rData, repData] = await Promise.all([
-          ctApi.getPatient(patientId),
-          ctApi.getObservations(patientId),
-          ctApi.getConditions(patientId),
-          ctApi.getMedications(patientId),
-          ctApi.getRiskAssessments(patientId),
-          ctApi.getReports(patientId),
-        ]);
-
-        if (active) {
-          setPatient(pData);
-          setObservations(oData || []);
-          setConditions(cData || []);
-          setMedications(mData || []);
-          setRiskAssessments(rData || []);
-          setReports(repData || []);
+        // Fetch patient profile first (core)
+        try {
+          const pData = await ctApi.getPatient(patientId);
+          if (active) setPatient(pData);
+        } catch (e) {
+          console.error("Failed to load patient core profile:", e);
+          throw new Error("Αποτυχία φόρτωσης βασικών στοιχείων ασθενούς.");
         }
+
+        // Fetch other clinical datasets sequentially to avoid database pool exhaustion on Render
+        try {
+          const oData = await ctApi.getObservations(patientId);
+          if (active) setObservations(oData || []);
+        } catch (e) { console.error("Failed to load observations:", e); }
+
+        try {
+          const cData = await ctApi.getConditions(patientId);
+          if (active) setConditions(cData || []);
+        } catch (e) { console.error("Failed to load conditions:", e); }
+
+        try {
+          const mData = await ctApi.getMedications(patientId);
+          if (active) setMedications(mData || []);
+        } catch (e) { console.error("Failed to load medications:", e); }
+
+        try {
+          const rData = await ctApi.getRiskAssessments(patientId);
+          if (active) setRiskAssessments(rData || []);
+        } catch (e) { console.error("Failed to load risk assessments:", e); }
+
+        try {
+          const repData = await ctApi.getReports(patientId);
+          if (active) setReports(repData || []);
+        } catch (e) { console.error("Failed to load clinical reports:", e); }
+
       } catch (err: unknown) {
         if (active) {
           const msg = err instanceof Error ? err.message : 'Αποτυχία φόρτωσης καρτέλας ασθενούς.';
