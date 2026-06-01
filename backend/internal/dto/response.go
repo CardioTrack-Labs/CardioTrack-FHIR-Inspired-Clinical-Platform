@@ -71,3 +71,15 @@ type MedicationResponse struct {
 	Status       string        `json:"status"`
 	CreatedAt    time.Time     `json:"created_at"`
 }
+
+type RiskAssessmentResponse struct {
+	ID             uint          `json:"id"`
+	PatientID      uint          `json:"patient_id"`
+	ScoreType      string        `json:"score_type"`
+	ScoreValue     int           `json:"score_value"`
+	RiskCategory   string        `json:"risk_category"`
+	Recommendation string        `json:"recommendation"`
+	CalculatedBy   *UserResponse `json:"calculated_by,omitempty"`
+	CalculatedAt   time.Time     `json:"calculated_at"`
+}
+

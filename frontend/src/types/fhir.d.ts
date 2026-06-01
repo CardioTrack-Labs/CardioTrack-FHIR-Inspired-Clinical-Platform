@@ -69,3 +69,15 @@ export interface HEARTScore {
   category: 'low' | 'moderate' | 'high';
   recommendation: string;
 }
+
+export interface RiskAssessment {
+  id?: number;
+  patient_id?: number;
+  score_type: string;
+  score_value: number;
+  risk_category: string;
+  recommendation?: string;
+  calculated_by?: User;
+  calculated_at?: string;
+}
+
