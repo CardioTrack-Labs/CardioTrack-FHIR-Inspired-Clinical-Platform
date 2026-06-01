@@ -669,7 +669,7 @@ const PortalReportsTab: React.FC<PortalReportsTabProps> = ({ conditions, reports
                   <div style={{ fontWeight: 500, fontSize: 14 }}>{c.description}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
                     {c.icd10Code} · {c.status === 'active' ? 'Ενεργή' : c.status === 'chronic' ? 'Χρόνια' : 'Αντιμετωπίστηκε'}
-                    {c.onsetDate && ` · από ${new Date(c.onsetDate).getFullYear()}`}
+                    {c.onset_date && ` · από ${new Date(c.onset_date).getFullYear()}`}
                   </div>
                 </div>
               </div>

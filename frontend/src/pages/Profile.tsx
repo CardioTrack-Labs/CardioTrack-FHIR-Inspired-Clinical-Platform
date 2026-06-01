@@ -650,7 +650,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         patientId,
         newCondCode.trim(),
         newCondDesc.trim(),
-        new Date().toISOString(),
+        new Date().toISOString().split('T')[0],
         newCondStatus
       );
       setConditions(prev => [newCond, ...prev]);
@@ -674,7 +674,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         newMedName.trim(),
         newMedDose.trim(),
         newMedFreq.trim() || '1× / ημέρα',
-        new Date().toISOString(),
+        new Date().toISOString().split('T')[0],
         '',
         'active'
       );
@@ -1216,7 +1216,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                     <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{c.description}</span>,
                     <CTBadge label={c.status} variant={c.status} />,
                     <span style={{ color: 'var(--ink-3)', fontSize: 12.5 }}>
-                      {new Date(c.onsetDate).toLocaleDateString('el-GR', {
+                      {new Date(c.onset_date).toLocaleDateString('el-GR', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
@@ -1241,7 +1241,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                     <span style={{ fontFamily: 'var(--mono)', color: 'var(--ink-2)' }}>{m.dosage}</span>,
                     m.frequency,
                     <span style={{ color: 'var(--ink-3)', fontSize: 12.5 }}>
-                      {new Date(m.startDate).toLocaleDateString('el-GR', {
+                      {new Date(m.start_date).toLocaleDateString('el-GR', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
