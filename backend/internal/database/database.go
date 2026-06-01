@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"time"
 
 	"github.com/AthanasiosChlr/cardiotrack/internal/models"
 	"gorm.io/driver/postgres"
@@ -27,6 +28,14 @@ func Connect(databaseURL string) {
 	}
 
 	log.Println("Successfully connected to database")
+
+	// Limit connection pool to be friendly to Supabase free tier connection limit (max 60)
+	sqlDB, err := DB.DB()
+	if err == nil {
+		sqlDB.SetMaxIdleConns(10)
+		sqlDB.SetMaxOpenConns(30)
+		sqlDB.SetConnMaxLifetime(time.Hour)
+	}
 
 	// Auto migrate models
 	log.Println("Running auto migration...")
