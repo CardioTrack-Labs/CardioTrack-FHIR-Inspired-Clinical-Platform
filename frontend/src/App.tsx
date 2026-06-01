@@ -4,8 +4,10 @@ import { Patients } from './pages/Patients';
 import { Profile } from './pages/Profile';
 import { Portal } from './pages/Portal';
 import { HeartScore } from './pages/HeartScore';
+import { AdminPanel } from './pages/AdminPanel';
 import { ctApi } from './lib/api';
 import { User } from './types/fhir';
+
 
 interface RouteState {
   page: string;
@@ -75,6 +77,8 @@ export const App: React.FC = () => {
     setCurrentUser(user);
     if (user.role === 'patient') {
       navigate('portal');
+    } else if (user.role === 'admin') {
+      navigate('admin');
     } else {
       navigate('patients');
     }
@@ -106,6 +110,10 @@ export const App: React.FC = () => {
           currentUser={currentUser}
         />
       )}
+      {route.page === 'admin' && (
+        <AdminPanel navigate={navigate} currentUser={currentUser} />
+      )}
     </div>
   );
+
 };

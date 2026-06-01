@@ -114,9 +114,10 @@ const NavBar: React.FC<NavBarProps> = ({ alertCount, currentUser }) => {
 interface DocNavProps {
   active: string;
   currentUser: User | null;
+  navigate?: (page: string, params?: Record<string, unknown>) => void;
 }
 
-const DocNav: React.FC<DocNavProps> = ({ active, currentUser }) => {
+const DocNav: React.FC<DocNavProps> = ({ active, currentUser, navigate }) => {
   const label = currentUser ? currentUser.name : 'Δρ. Νικολάου';
   return (
     <div
@@ -170,9 +171,36 @@ const DocNav: React.FC<DocNavProps> = ({ active, currentUser }) => {
           </button>
         );
       })}
+
+      {currentUser?.role === 'admin' && (
+        <button
+          onClick={() => navigate?.('admin')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 9,
+            padding: '9px 18px',
+            fontSize: 14,
+            fontWeight: 600,
+            color: 'var(--primary)',
+            background: 'var(--primary-bg)',
+            border: 'none',
+            borderLeft: '3px solid var(--primary)',
+            cursor: 'pointer',
+            fontFamily: 'var(--font)',
+            textAlign: 'left',
+            width: '100%',
+            transition: 'background 0.12s, color 0.12s',
+            marginTop: 12,
+          }}
+        >
+          ⚙️ Διαχείριση
+        </button>
+      )}
     </div>
   );
 };
+
 
 // ── Stats strip ────────────────────────────────────────────
 const StatsStrip: React.FC<{ patients: MappedPatient[] }> = ({ patients }) => {
@@ -689,7 +717,7 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
         <NavBar alertCount={0} currentUser={currentUser} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <DocNav active="patients" currentUser={currentUser} />
+          <DocNav active="patients" currentUser={currentUser} navigate={navigate} />
           <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '28px 32px' }}>
             <div style={{ textAlign: 'center', color: 'var(--primary)' }}>
               <div
@@ -721,7 +749,7 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
         <NavBar alertCount={0} currentUser={currentUser} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <DocNav active="patients" currentUser={currentUser} />
+          <DocNav active="patients" currentUser={currentUser} navigate={navigate} />
           <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '28px 32px' }}>
             <div
               style={{
@@ -751,7 +779,7 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
       <NavBar alertCount={totalAlerts} currentUser={currentUser} />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <DocNav active="patients" currentUser={currentUser} />
+        <DocNav active="patients" currentUser={currentUser} navigate={navigate} />
         <main style={{ flex: 1, overflow: 'auto', padding: '28px 32px' }}>
           <div style={{ marginBottom: 24 }}>
             <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ink)', letterSpacing: -0.3, margin: 0 }}>

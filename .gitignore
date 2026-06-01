@@ -16,6 +16,8 @@ vendor/
 backend/server
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/tmp/
+
 
 # ─── React / Node ─────────────────────────────────────────────────────────────
 frontend/node_modules/

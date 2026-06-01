@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ctApi } from '../lib/api';
-import { User, Patient, Observation, Medication, Condition } from '../types/fhir';
+import { User, Patient, Observation, Medication, Condition, Report } from '../types/fhir';
 import { CTAvatar, CTBadge } from '../components/ui';
 
 // ── Props ─────────────────────────────────────────────────────
@@ -630,12 +630,27 @@ const PortalAppointmentsTab: React.FC<{ doctorName: string }> = ({ doctorName })
 };
 
 // ── Tab: Αναφορές ─────────────────────────────────────────────
-const PortalReportsTab: React.FC<{ conditions: Condition[] }> = ({ conditions }) => {
-  const reports = [
-    { title: 'Αποτελέσματα Εξετάσεων Q1', date: '3 Απρ 2025', from: 'Δρ. Νικολάου', icon: '◎' },
-    { title: 'Αποτέλεσμα ECG',             date: '12 Μαΐ 2025', from: 'Δρ. Νικολάου', icon: '♡' },
-    { title: 'Εξιτήριο — Μαρ 2024',        date: '15 Μαρ 2024', from: 'Δρ. Νικολάου', icon: '≡' },
-  ];
+interface PortalReportsTabProps {
+  conditions: Condition[];
+  reports: Report[];
+}
+
+const PortalReportsTab: React.FC<PortalReportsTabProps> = ({ conditions, reports }) => {
+  const getFileUrl = (url: string) => {
+    if (url.startsWith('http')) return url;
+    const base = (import.meta.env.VITE_API_URL || '').replace('/api/v1', '');
+    return `${base || 'http://localhost:8080'}${url}`;
+  };
+
+  const getReportIcon = (type: string) => {
+    switch (type?.toUpperCase()) {
+      case 'ECG': return '♡';
+      case 'LAB': return '◎';
+      case 'IMAGING': return 'Θ';
+      case 'DISCHARGE': return '≡';
+      default: return '🗎';
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -668,30 +683,43 @@ const PortalReportsTab: React.FC<{ conditions: Condition[] }> = ({ conditions })
           Έγγραφα
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {reports.map((r, i) => (
-            <div
-              key={i}
-              style={{
-                background: 'var(--bg)', border: '1px solid var(--border)',
-                borderRadius: 'var(--r-lg)', padding: '16px 20px',
-                boxShadow: 'var(--sh)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
-              }}
-            >
-              <div style={{
-                width: 40, height: 40, borderRadius: 8,
-                background: 'var(--primary-bg)', border: '1px solid var(--primary-bdr)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, color: 'var(--primary)', flexShrink: 0,
-              }}>
-                {r.icon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 500, fontSize: 14 }}>{r.title}</div>
-                <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 2 }}>{r.date} · {r.from}</div>
-              </div>
-              <span style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 500 }}>Λήψη ↓</span>
+          {reports.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', color: 'var(--ink-3)', fontSize: 13.5 }}>
+              Δεν υπάρχουν ακόμη καταχωρημένες κλινικές αναφορές.
             </div>
-          ))}
+          ) : (
+            reports.map((r) => (
+              <div
+                key={r.id}
+                onClick={() => window.open(getFileUrl(r.file_url), '_blank')}
+                style={{
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-lg)', padding: '16px 20px',
+                  boxShadow: 'var(--sh)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: 8,
+                  background: 'var(--primary-bg)', border: '1px solid var(--primary-bdr)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, color: 'var(--primary)', flexShrink: 0,
+                }}>
+                  {getReportIcon(r.report_type)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{r.title}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 2 }}>
+                    {new Date(r.report_date).toLocaleDateString('el-GR', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })} · {r.uploaded_by?.name || 'Δρ. Νικολάου'}
+                  </div>
+                </div>
+                <span style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 500 }}>Προβολή ↓</span>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>
@@ -714,6 +742,7 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
   const [observations, setObservations] = useState<Observation[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [medState, setMedState] = useState<boolean[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -734,10 +763,11 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
         setPatient(myPatient);
 
         if (myPatient) {
-          const [obs, meds, conds] = await Promise.all([
+          const [obs, meds, conds, reps] = await Promise.all([
             ctApi.getObservations(myPatient.id),
             ctApi.getMedications(myPatient.id),
             ctApi.getConditions(myPatient.id),
+            ctApi.getReports(myPatient.id),
           ]);
           if (!active) return;
           setObservations(obs ?? []);
@@ -745,6 +775,7 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
           setMedications(activeMeds);
           setMedState(new Array(activeMeds.length).fill(false));
           setConditions(conds ?? []);
+          setReports(reps ?? []);
         }
       } catch (err) {
         if (active) setError('Αδυναμία φόρτωσης δεδομένων. Παρακαλώ δοκιμάστε αργότερα.');
@@ -833,7 +864,7 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
               <PortalAppointmentsTab doctorName={doctorName} />
             )}
             {activeTab === 'Αναφορές' && (
-              <PortalReportsTab conditions={conditions} />
+              <PortalReportsTab conditions={conditions} reports={reports} />
             )}
           </>
         )}
