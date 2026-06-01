@@ -33,10 +33,10 @@ func RegisterRoutes(r *gin.Engine) {
 			patients.GET("/me", patientHandler.GetMyProfile)
 
 			// Admin/Cardiologist can create patients
-			patients.POST("/", middleware.RequireRole("admin", "cardiologist"), patientHandler.CreatePatient)
+			patients.POST("", middleware.RequireRole("admin", "cardiologist"), patientHandler.CreatePatient)
 			
 			// Admin/Cardiologist see all, Doctor sees assigned, Patient sees self (handled in handler)
-			patients.GET("/", middleware.RequireRole("admin", "cardiologist", "doctor"), middleware.EnsureDoctorPatientAccess(), patientHandler.ListPatients)
+			patients.GET("", middleware.RequireRole("admin", "cardiologist", "doctor"), middleware.EnsureDoctorPatientAccess(), patientHandler.ListPatients)
 			
 			// Get specific patient (RBAC handled inside middleware + handler)
 			patients.GET("/:id", middleware.RequirePatientAccess(), patientHandler.GetPatient)
