@@ -14,8 +14,8 @@ export interface Patient {
   gender: string;
   medical_record_number: string;
   blood_type?: string;
-  assignedDoctorId?: number;
-  assignedDoctor?: User;
+  assigned_doctor_id?: number;
+  assigned_doctor?: User;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -34,8 +34,8 @@ export interface Observation {
   type: ObservationType;
   value: number;
   unit: string;
-  recordedAt: string;
-  isAbnormal: boolean;
+  recorded_at: string;
+  is_abnormal: boolean;
   notes?: string;
 }
 

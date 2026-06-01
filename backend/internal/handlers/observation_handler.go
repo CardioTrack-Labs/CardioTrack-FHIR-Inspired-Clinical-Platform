@@ -37,10 +37,16 @@ func (h *ObservationHandler) CreateObservation(c *gin.Context) {
 		return
 	}
 
-	recordedAt, err := time.Parse(time.RFC3339, req.RecordedAt)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format, use RFC3339"})
-		return
+	var recordedAt time.Time
+	if req.RecordedAt == "" {
+		recordedAt = time.Now()
+	} else {
+		var err error
+		recordedAt, err = time.Parse(time.RFC3339, req.RecordedAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format, use RFC3339"})
+			return
+		}
 	}
 
 	userID, _ := c.Get("user_id")

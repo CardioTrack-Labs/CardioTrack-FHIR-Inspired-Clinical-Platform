@@ -10,21 +10,28 @@ const ROLES = [
   {
     id: 'doctor',
     label: 'Ιατρός',
-    sub: 'Ασθενείς, vitals, διαγνώσεις',
+    sub: 'Μόνο δικοί του ασθενείς',
     email: 'dr.smith@cardiotrack.dev',
+    password: 'doctor123',
+  },
+  {
+    id: 'cardiologist',
+    label: 'Καρδιολόγος',
+    sub: 'Όλοι οι ασθενείς, ECG',
+    email: 'dr.cardio@cardiotrack.dev',
     password: 'doctor123',
   },
   {
     id: 'patient',
     label: 'Ασθενής',
-    sub: 'Vitals, φάρμακα, αναφορές',
+    sub: 'Ιατρικό προφίλ, vitals',
     email: 'patient1@cardiotrack.dev',
     password: 'patient123',
   },
   {
     id: 'admin',
     label: 'Διαχειριστής',
-    sub: 'Χρήστες, σύστημα, στατιστικά',
+    sub: 'Σύστημα, στατιστικά, ρόλοι',
     email: 'admin@cardiotrack.dev',
     password: 'admin123',
   },
@@ -102,32 +109,67 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState(ROLES[0].password);
   const [loading, setLoading] = useState(false);
   const [pwError, setPwError] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [name, setName] = useState('');
+  const [registerSuccess, setRegisterSuccess] = useState('');
 
   const selectRole = (r: typeof ROLES[0]) => {
     setRole(r.id);
     setEmail(r.email);
     setPassword(r.password);
     setPwError('');
+    setRegisterSuccess('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password.trim()) {
-      setPwError('Εισάγετε κωδικό πρόσβασης');
-      return;
-    }
-    setLoading(true);
-    setPwError('');
-    try {
-      const user = await ctApi.login(email, password);
-      onLoginSuccess(user);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Αποτυχία σύνδεσης. Ελέγξτε τα στοιχεία σας.';
-      setPwError(msg);
-    } finally {
-      setLoading(false);
+    if (isRegistering) {
+      if (!name.trim()) {
+        setPwError('Εισάγετε το όνομά σας');
+        return;
+      }
+      if (!email.trim() || !email.includes('@')) {
+        setPwError('Εισάγετε έγκυρο email');
+        return;
+      }
+      if (password.length < 6) {
+        setPwError('Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες');
+        return;
+      }
+      setLoading(true);
+      setPwError('');
+      setRegisterSuccess('');
+      try {
+        await ctApi.register(email, password, name);
+        setRegisterSuccess('Η εγγραφή ολοκληρώθηκε επιτυχώς! Μπορείτε να συνδεθείτε.');
+        setIsRegistering(false);
+        setPassword('');
+        setPwError('');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Αποτυχία εγγραφής.';
+        setPwError(msg);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      if (!password.trim()) {
+        setPwError('Εισάγετε κωδικό πρόσβασης');
+        return;
+      }
+      setLoading(true);
+      setPwError('');
+      try {
+        const user = await ctApi.login(email, password);
+        onLoginSuccess(user);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Αποτυχία σύνδεσης. Ελέγξτε τα στοιχεία σας.';
+        setPwError(msg);
+      } finally {
+        setLoading(false);
+      }
     }
   };
+
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'var(--font)' }}>
@@ -237,6 +279,23 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       >
         <div style={{ width: '100%', maxWidth: 430 }}>
 
+          {registerSuccess && (
+            <div
+              style={{
+                marginBottom: 20,
+                padding: '11px 14px',
+                background: 'var(--green-bg)',
+                border: '1px solid var(--green-bdr)',
+                borderRadius: 'var(--r)',
+                fontSize: 13.5,
+                color: 'var(--green)',
+                fontWeight: 500,
+              }}
+            >
+              ✓ {registerSuccess}
+            </div>
+          )}
+
           <h1
             style={{
               fontSize: 26,
@@ -246,77 +305,89 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               marginBottom: 6,
             }}
           >
-            Καλώς ήρθατε
+            {isRegistering ? 'Δημιουργία Λογαριασμού' : 'Καλώς ήρθατε'}
           </h1>
           <p style={{ fontSize: 14, color: 'var(--ink-3)', marginBottom: 30 }}>
-            Επιλέξτε ρόλο και συνδεθείτε στο σύστημα.
+            {isRegistering ? 'Εγγραφείτε ως ασθενής στο CardioTrack.' : 'Επιλέξτε ρόλο και συνδεθείτε στο σύστημα.'}
           </p>
 
-          {/* Role selector */}
-          <div style={{ marginBottom: 26 }}>
-            <div
-              style={{
-                fontSize: 11.5,
-                fontWeight: 600,
-                color: 'var(--ink-3)',
-                textTransform: 'uppercase',
-                letterSpacing: 0.7,
-                marginBottom: 10,
-              }}
-            >
-              Ρόλος
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {ROLES.map(r => {
-                const on = role === r.id;
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => selectRole(r)}
-                    style={{
-                      padding: '12px 14px',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      border: `1.5px solid ${on ? 'var(--primary)' : 'var(--border-s)'}`,
-                      borderRadius: 'var(--r-lg)',
-                      background: on ? 'var(--primary-bg)' : 'var(--bg)',
-                      fontFamily: 'var(--font)',
-                      transition: 'all 0.12s',
-                    }}
-                  >
-                    <div
+          {/* Role selector - only show when logging in */}
+          {!isRegistering && (
+            <div style={{ marginBottom: 26 }}>
+              <div
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  color: 'var(--ink-3)',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.7,
+                  marginBottom: 10,
+                }}
+              >
+                Ρόλος
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {ROLES.map(r => {
+                  const on = role === r.id;
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => selectRole(r)}
                       style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: on ? 'var(--primary)' : 'var(--ink)',
-                        marginBottom: 3,
+                        padding: '12px 14px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        border: `1.5px solid ${on ? 'var(--primary)' : 'var(--border-s)'}`,
+                        borderRadius: 'var(--r-lg)',
+                        background: on ? 'var(--primary-bg)' : 'var(--bg)',
+                        fontFamily: 'var(--font)',
+                        transition: 'all 0.12s',
                       }}
                     >
-                      {r.label}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11.5,
-                        lineHeight: 1.4,
-                        color: on ? 'oklch(55% 0.15 245)' : 'var(--ink-3)',
-                      }}
-                    >
-                      {r.sub}
-                    </div>
-                  </button>
-                );
-              })}
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: on ? 'var(--primary)' : 'var(--ink)',
+                          marginBottom: 3,
+                        }}
+                      >
+                        {r.label}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          lineHeight: 1.4,
+                          color: on ? 'oklch(55% 0.15 245)' : 'var(--ink-3)',
+                        }}
+                      >
+                        {r.sub}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {isRegistering && (
+              <FormInput
+                label="Ονοματεπώνυμο"
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="π.χ. Ιωάννης Παπαδόπουλος"
+              />
+            )}
             <FormInput
               label="Email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               mono
+              placeholder="email@example.com"
             />
             <FormInput
               label="Κωδικός πρόσβασης"
@@ -348,28 +419,89 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 boxShadow: loading ? 'none' : '0 1px 2px oklch(0% 0 0 / .18)',
               }}
             >
-              {loading ? 'Σύνδεση…' : 'Σύνδεση →'}
+              {loading ? (isRegistering ? 'Εγγραφή…' : 'Σύνδεση…') : (isRegistering ? 'Εγγραφή →' : 'Σύνδεση →')}
             </button>
           </form>
 
-          {/* Demo hint */}
-          <div
-            style={{
-              marginTop: 22,
-              padding: '11px 14px',
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--r)',
-              fontSize: 12.5,
-              color: 'var(--ink-3)',
-              lineHeight: 1.6,
-            }}
-          >
-            <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>Demo: </span>
-            Επιλέξτε ρόλο — email &amp; password συμπληρώνονται αυτόματα.
+          {/* Toggle login/register */}
+          <div style={{ marginTop: 18, textAlign: 'center', fontSize: 13.5, color: 'var(--ink-3)' }}>
+            {isRegistering ? (
+              <>
+                Έχετε ήδη λογαριασμό;{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegistering(false);
+                    setPwError('');
+                    setRegisterSuccess('');
+                    // Reset to default role inputs
+                    setRole(ROLES[0].id);
+                    setEmail(ROLES[0].email);
+                    setPassword(ROLES[0].password);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    padding: 0,
+                    fontFamily: 'var(--font)',
+                  }}
+                >
+                  Σύνδεση
+                </button>
+              </>
+            ) : (
+              <>
+                Δεν έχετε λογαριασμό;{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegistering(true);
+                    setEmail('');
+                    setPassword('');
+                    setName('');
+                    setPwError('');
+                    setRegisterSuccess('');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--primary)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    padding: 0,
+                    fontFamily: 'var(--font)',
+                  }}
+                >
+                  Εγγραφή ασθενούς
+                </button>
+              </>
+            )}
           </div>
 
+          {/* Demo hint - only show when logging in */}
+          {!isRegistering && (
+            <div
+              style={{
+                marginTop: 22,
+                padding: '11px 14px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r)',
+                fontSize: 12.5,
+                color: 'var(--ink-3)',
+                lineHeight: 1.6,
+              }}
+            >
+              <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>Demo: </span>
+              Επιλέξτε ρόλο — email &amp; password συμπληρώνονται αυτόματα.
+            </div>
+          )}
+
         </div>
+
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -55,6 +56,21 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if err := h.userRepo.Create(user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
+	}
+
+	// For patient role, automatically create a corresponding patient profile
+	if user.Role == "patient" {
+		patientRepo := repository.NewPatientRepository()
+		patient := &models.Patient{
+			UserID:              user.ID,
+			DateOfBirth:         time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
+			Gender:              "other",
+			MedicalRecordNumber: fmt.Sprintf("MRN-%d", time.Now().UnixNano()%100000000),
+		}
+		if err := patientRepo.Create(patient); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create patient profile"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})

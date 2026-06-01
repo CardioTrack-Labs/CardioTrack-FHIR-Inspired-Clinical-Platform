@@ -10,6 +10,7 @@ import (
 	"github.com/AthanasiosChlr/cardiotrack/internal/middleware"
 	"github.com/AthanasiosChlr/cardiotrack/internal/routes"
 	"github.com/AthanasiosChlr/cardiotrack/internal/seed"
+	"github.com/AthanasiosChlr/cardiotrack/internal/websocket"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,6 +18,10 @@ func main() {
 	cfg := config.Load()
 
 	gin.SetMode(cfg.GinMode)
+
+	// Initialize global WebSocket Hub for real-time clinical communication
+	hub := websocket.NewHub()
+	go hub.Run()
 
 	r := gin.Default()
 
@@ -29,6 +34,11 @@ func main() {
 	// Health check — used by Render and Docker to verify the service is up
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	// WebSocket connection upgrading endpoint
+	r.GET("/ws", func(c *gin.Context) {
+		websocket.ServeWS(hub, c)
 	})
 
 	// Initialize Database and run auto migration

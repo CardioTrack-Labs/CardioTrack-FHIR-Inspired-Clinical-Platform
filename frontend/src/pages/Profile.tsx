@@ -148,7 +148,7 @@ const VitalsChart = ({
 }) => {
   // Filter and sort observations by recordedAt ascending
   const sortedObs = useMemo(() => {
-    return [...observations].sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+    return [...observations].sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
   }, [observations]);
 
   const series: ChartSeries[] = useMemo(() => {
@@ -212,7 +212,7 @@ const VitalsChart = ({
     const dates = sortedObs
       .filter(o => o.type === (mode === 'bp' ? 'systolic_bp' : mode === 'hr' ? 'heart_rate' : 'spo2'))
       .map(o => {
-        const d = new Date(o.recordedAt);
+        const d = new Date(o.recorded_at);
         return `${d.getDate()}/${d.getMonth() + 1}`;
       });
     
@@ -587,12 +587,12 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
     const latest: Record<string, { val: number; unit: string; abn: boolean; date: string }> = {};
     observations.forEach(o => {
       const prev = latest[o.type];
-      if (!prev || new Date(o.recordedAt).getTime() > new Date(prev.date).getTime()) {
+      if (!prev || new Date(o.recorded_at).getTime() > new Date(prev.date).getTime()) {
         latest[o.type] = {
           val: o.value,
           unit: o.unit,
-          abn: o.isAbnormal,
-          date: o.recordedAt,
+          abn: o.is_abnormal,
+          date: o.recorded_at,
         };
       }
     });
@@ -1164,7 +1164,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                   cols={['Ημερομηνία', 'Τύπος', 'Τιμή', 'Μονάδα', 'Κατάσταση', 'Καταχώρηση']}
                   rows={observations.slice(0, 10).map(o => [
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-2)' }}>
-                      {new Date(o.recordedAt).toLocaleString('el-GR', {
+                      {new Date(o.recorded_at).toLocaleString('el-GR', {
                         day: 'numeric',
                         month: 'short',
                         hour: '2-digit',
@@ -1184,13 +1184,13 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                       style={{
                         fontFamily: 'var(--mono)',
                         fontWeight: 600,
-                        color: o.isAbnormal ? 'var(--red)' : 'var(--ink)',
+                        color: o.is_abnormal ? 'var(--red)' : 'var(--ink)',
                       }}
                     >
                       {o.value}
                     </span>,
                     <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{o.unit}</span>,
-                    o.isAbnormal ? (
+                    o.is_abnormal ? (
                       <CTBadge label="Abnormal" variant="abnormal" />
                     ) : (
                       <CTBadge label="Normal" variant="normal" />

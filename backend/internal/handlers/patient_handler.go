@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -15,11 +16,13 @@ import (
 
 type PatientHandler struct {
 	patientRepo *repository.PatientRepository
+	userRepo    *repository.UserRepository
 }
 
 func NewPatientHandler() *PatientHandler {
 	return &PatientHandler{
 		patientRepo: repository.NewPatientRepository(),
+		userRepo:    repository.NewUserRepository(),
 	}
 }
 
@@ -106,6 +109,23 @@ func (h *PatientHandler) GetMyProfile(c *gin.Context) {
 	patient, err := h.patientRepo.FindByUserID(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Auto-generation fallback: Check if user has the patient role
+			user, userErr := h.userRepo.FindByID(userID)
+			if userErr == nil && user != nil && user.Role == "patient" {
+				newPatient := &models.Patient{
+					UserID:              userID,
+					DateOfBirth:         time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
+					Gender:              "other",
+					MedicalRecordNumber: fmt.Sprintf("MRN-%d", time.Now().UnixNano()%100000000),
+				}
+				if createErr := h.patientRepo.Create(newPatient); createErr == nil {
+					// Retrieve the completed object with all relation fields preloaded
+					if preloadedPatient, reloadErr := h.patientRepo.FindByUserID(userID); reloadErr == nil {
+						c.JSON(http.StatusOK, mapPatientToResponse(preloadedPatient))
+						return
+					}
+				}
+			}
 			c.JSON(http.StatusNotFound, gin.H{"error": "No patient profile found for this account"})
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})

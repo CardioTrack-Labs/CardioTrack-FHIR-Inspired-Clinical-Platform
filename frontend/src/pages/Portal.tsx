@@ -8,8 +8,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ctApi } from '../lib/api';
-import { User, Patient, Observation, Medication, Condition } from '../types/fhir';
+import { User, Patient, Observation, Medication, Condition, Report } from '../types/fhir';
 import { CTAvatar, CTBadge } from '../components/ui';
+import { Send, MessageSquare } from 'lucide-react';
 
 // ── Props ─────────────────────────────────────────────────────
 interface PortalProps {
@@ -40,7 +41,7 @@ function doctorInitials(name: string): string {
     .toUpperCase();
 }
 
-const PORTAL_TABS = ['Αρχική', 'Vitals', 'Φάρμακα', 'Ραντεβού', 'Αναφορές'] as const;
+const PORTAL_TABS = ['Αρχική', 'Vitals', 'Φάρμακα', 'Ραντεβού', 'Μηνύματα', 'Αναφορές'] as const;
 type PortalTab = typeof PORTAL_TABS[number];
 
 // ── SVG Sparkline ─────────────────────────────────────────────
@@ -75,7 +76,7 @@ interface NavBarProps {
 }
 
 const PortalNavBar: React.FC<NavBarProps> = ({ patient, onLogout }) => {
-  const doctorName = patient?.assignedDoctor?.name ?? '—';
+  const doctorName = patient?.assigned_doctor?.name ?? '—';
   const patientName = patient?.user?.name ?? '';
   const initials = patientName
     .split(' ')
@@ -181,7 +182,7 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
   const latest: Record<string, Observation> = {};
   for (const obs of observations) {
     const existing = latest[obs.type];
-    if (!existing || new Date(obs.recordedAt) > new Date(existing.recordedAt)) {
+    if (!existing || new Date(obs.recorded_at) > new Date(existing.recorded_at)) {
       latest[obs.type] = obs;
     }
   }
@@ -191,7 +192,7 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
   const sys = latest['systolic_bp'];
   const dia = latest['diastolic_bp'];
   if (sys && dia) {
-    const abn = sys.isAbnormal || dia.isAbnormal;
+    const abn = sys.is_abnormal || dia.is_abnormal;
     cards.push({
       label: 'Πίεση αίματος',
       value: `${Math.round(sys.value)}/${Math.round(dia.value)}`,
@@ -207,8 +208,8 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
       label: 'Καρδιακοί παλμοί',
       value: String(Math.round(hr.value)),
       unit: 'bpm',
-      status: hr.isAbnormal ? 'abnormal' : 'normal',
-      note: hr.isAbnormal ? 'Μη φυσιολογικοί' : 'Φυσιολογικοί',
+      status: hr.is_abnormal ? 'abnormal' : 'normal',
+      note: hr.is_abnormal ? 'Μη φυσιολογικοί' : 'Φυσιολογικοί',
     });
   }
 
@@ -218,8 +219,8 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
       label: 'Κορεσμός οξυγόνου',
       value: String(Math.round(spo2.value)),
       unit: '%',
-      status: spo2.isAbnormal ? 'abnormal' : 'normal',
-      note: spo2.isAbnormal ? 'Χαμηλός' : 'Φυσιολογικός',
+      status: spo2.is_abnormal ? 'abnormal' : 'normal',
+      note: spo2.is_abnormal ? 'Χαμηλός' : 'Φυσιολογικός',
     });
   }
 
@@ -229,8 +230,8 @@ function deriveVitals(observations: Observation[]): VitalInfo[] {
       label: 'Γλυκόζη',
       value: String(Math.round(gluc.value)),
       unit: 'mg/dL',
-      status: gluc.isAbnormal ? 'elevated' : 'normal',
-      note: gluc.isAbnormal ? 'Αυξημένη' : 'Φυσιολογική',
+      status: gluc.is_abnormal ? 'elevated' : 'normal',
+      note: gluc.is_abnormal ? 'Αυξημένη' : 'Φυσιολογική',
     });
   }
 
@@ -253,7 +254,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   patient, vitals, bpTrend, latestBP, medications, medState, setMedState, onTabChange,
 }) => {
   const patientFirstName = patient?.user?.name?.split(' ')[0] ?? '';
-  const doctorName = patient?.assignedDoctor?.name ?? '—';
+  const doctorName = patient?.assigned_doctor?.name ?? '—';
   const morningMeds = medications.filter(m => m.frequency?.toLowerCase().includes('morning') || m.frequency?.toLowerCase().includes('πρωί') || m.frequency?.toLowerCase().includes('πρωινή'));
   // Fallback: if no freq info, show first half as morning
   const displayMorning = morningMeds.length > 0 ? morningMeds : medications.slice(0, Math.ceil(medications.length / 2));
@@ -630,12 +631,27 @@ const PortalAppointmentsTab: React.FC<{ doctorName: string }> = ({ doctorName })
 };
 
 // ── Tab: Αναφορές ─────────────────────────────────────────────
-const PortalReportsTab: React.FC<{ conditions: Condition[] }> = ({ conditions }) => {
-  const reports = [
-    { title: 'Αποτελέσματα Εξετάσεων Q1', date: '3 Απρ 2025', from: 'Δρ. Νικολάου', icon: '◎' },
-    { title: 'Αποτέλεσμα ECG',             date: '12 Μαΐ 2025', from: 'Δρ. Νικολάου', icon: '♡' },
-    { title: 'Εξιτήριο — Μαρ 2024',        date: '15 Μαρ 2024', from: 'Δρ. Νικολάου', icon: '≡' },
-  ];
+interface PortalReportsTabProps {
+  conditions: Condition[];
+  reports: Report[];
+}
+
+const PortalReportsTab: React.FC<PortalReportsTabProps> = ({ conditions, reports }) => {
+  const getFileUrl = (url: string) => {
+    if (url.startsWith('http')) return url;
+    const base = (import.meta.env.VITE_API_URL || '').replace('/api/v1', '');
+    return `${base || 'http://localhost:8080'}${url}`;
+  };
+
+  const getReportIcon = (type: string) => {
+    switch (type?.toUpperCase()) {
+      case 'ECG': return '♡';
+      case 'LAB': return '◎';
+      case 'IMAGING': return 'Θ';
+      case 'DISCHARGE': return '≡';
+      default: return '🗎';
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -668,30 +684,43 @@ const PortalReportsTab: React.FC<{ conditions: Condition[] }> = ({ conditions })
           Έγγραφα
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {reports.map((r, i) => (
-            <div
-              key={i}
-              style={{
-                background: 'var(--bg)', border: '1px solid var(--border)',
-                borderRadius: 'var(--r-lg)', padding: '16px 20px',
-                boxShadow: 'var(--sh)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
-              }}
-            >
-              <div style={{
-                width: 40, height: 40, borderRadius: 8,
-                background: 'var(--primary-bg)', border: '1px solid var(--primary-bdr)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, color: 'var(--primary)', flexShrink: 0,
-              }}>
-                {r.icon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 500, fontSize: 14 }}>{r.title}</div>
-                <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 2 }}>{r.date} · {r.from}</div>
-              </div>
-              <span style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 500 }}>Λήψη ↓</span>
+          {reports.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', color: 'var(--ink-3)', fontSize: 13.5 }}>
+              Δεν υπάρχουν ακόμη καταχωρημένες κλινικές αναφορές.
             </div>
-          ))}
+          ) : (
+            reports.map((r) => (
+              <div
+                key={r.id}
+                onClick={() => window.open(getFileUrl(r.file_url), '_blank')}
+                style={{
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-lg)', padding: '16px 20px',
+                  boxShadow: 'var(--sh)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: 40, height: 40, borderRadius: 8,
+                  background: 'var(--primary-bg)', border: '1px solid var(--primary-bdr)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, color: 'var(--primary)', flexShrink: 0,
+                }}>
+                  {getReportIcon(r.report_type)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{r.title}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 2 }}>
+                    {new Date(r.report_date).toLocaleDateString('el-GR', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })} · {r.uploaded_by?.name || 'Δρ. Νικολάου'}
+                  </div>
+                </div>
+                <span style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 500 }}>Προβολή ↓</span>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>
@@ -707,6 +736,294 @@ const PortalSkeleton: React.FC = () => (
   </div>
 );
 
+// ── Tab: Μηνύματα (Clinical Chat) ─────────────────────────────
+interface PortalMessagesTabProps {
+  patient: Patient | null;
+  currentUser: User | null;
+}
+
+const PortalMessagesTab: React.FC<PortalMessagesTabProps> = ({ patient, currentUser }) => {
+  const doctorId = patient?.assigned_doctor?.id || patient?.assigned_doctor_id || 2;
+  const doctorName = patient?.assigned_doctor?.name || 'Δρ. Smith';
+  const doctorRole = patient?.assigned_doctor?.role || 'doctor';
+  
+  const drInitials = doctorName
+    .split(' ')
+    .filter(Boolean)
+    .slice(-2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase();
+
+  const getInitialMessages = () => {
+    if (currentUser?.id === 5) {
+      return [
+        { sender: 'patient' as const, text: 'Καλημέρα γιατρέ. Σας στέλνω γιατί ένιωσα ένα ελαφρύ σφίξιμο στο στήθος πριν από περίπου μία ώρα κατά τη διάρκεια ήπιας βάδισης.', time: '10:20' },
+        { sender: 'doctor' as const, text: 'Καλημέρα Γεώργιε. Το σφίξιμο αντανακλά κάπου αλλού, π.χ. στο αριστερό χέρι ή στην πλάτη; Συνοδεύεται από δύσπνοια ή εφίδρωση;', time: '10:22' },
+        { sender: 'patient' as const, text: 'Όχι, δεν αντανακλά κάπου αλλού. Απλά ένιωσα λίγο σφίξιμο. Τώρα που κάθομαι έχει υποχωρήσει κάπως, αλλά εξακολουθώ να ανησυχώ.', time: '10:24' }
+      ];
+    }
+    return [
+      { sender: 'doctor' as const, text: `Καλημέρα! Είμαι ο/η ${doctorName}, ο προσωπικός σας ιατρός. Πώς μπορώ να σας βοηθήσω σήμερα;`, time: '09:00' }
+    ];
+  };
+
+  const [messages, setMessages] = useState<Array<{ sender: 'patient' | 'doctor'; text: string; time: string }>>(getInitialMessages);
+  const [inputText, setInputText] = useState('');
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const chatEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/^http:\/\/|^https:\/\//, '') : 'localhost:8080';
+    const wsUrl = `${protocol}//${host}/ws?user_id=${currentUser.id}&role=${currentUser.role}`;
+
+    console.log('[WS Patient] Connecting to:', wsUrl);
+    setWsStatus('connecting');
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('[WS Patient] Connected successfully');
+      setWsStatus('connected');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[WS Patient] Message received:', data);
+
+        // Ensure the message is from our assigned doctor
+        if (data.sender_id === doctorId) {
+          setMessages(prev => [
+            ...prev,
+            {
+              sender: 'doctor',
+              text: data.text,
+              time: data.time || new Date().toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' })
+            }
+          ]);
+        }
+      } catch (err) {
+        console.error('[WS Patient] Parse failed:', err);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('[WS Patient] Disconnected');
+      setWsStatus('disconnected');
+    };
+
+    ws.onerror = (err) => {
+      console.error('[WS Patient] Socket error:', err);
+      setWsStatus('disconnected');
+    };
+
+    setSocket(ws);
+
+    return () => {
+      ws.close();
+    };
+  }, [currentUser, doctorId]);
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    const timeStr = new Date().toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+    const payload = {
+      sender_id: currentUser?.id,
+      receiver_id: doctorId,
+      text: inputText,
+      time: timeStr
+    };
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(payload));
+      console.log('[WS Patient] Outbound message sent:', payload);
+    }
+
+    setMessages(prev => [
+      ...prev,
+      {
+        sender: 'patient',
+        text: inputText,
+        time: timeStr
+      }
+    ]);
+    setInputText('');
+  };
+
+  const getStatusColor = () => {
+    if (wsStatus === 'connected') return 'var(--green)';
+    if (wsStatus === 'connecting') return 'var(--amber)';
+    return 'var(--ink-3)';
+  };
+
+  const getStatusLabel = () => {
+    if (wsStatus === 'connected') return 'Σε σύνδεση';
+    if (wsStatus === 'connecting') return 'Σύνδεση...';
+    return 'Αποσυνδεδεμένος';
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)', animation: 'fadeIn 0.2s ease-in-out' }}>
+      
+      {/* Active Doctor Header */}
+      <div style={{
+        padding: '14px 20px',
+        border: '1px solid var(--border)',
+        borderBottom: 'none',
+        borderRadius: 'var(--r-lg) var(--r-lg) 0 0',
+        background: 'var(--surface)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: 'var(--sh)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <CTAvatar initials={drInitials || 'ΔΡ'} size={38} />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--ink)' }}>{doctorName}</span>
+              <CTBadge
+                label={doctorRole === 'cardiologist' ? 'Καρδιολόγος' : 'Θεράπων Ιατρός'}
+                variant={doctorRole === 'cardiologist' ? 'chronic' : 'pending'}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: getStatusColor(),
+                display: 'inline-block'
+              }} />
+              <span style={{ fontSize: 11.5, color: 'var(--ink-3)' }}>{getStatusLabel()}</span>
+            </div>
+          </div>
+        </div>
+        <span style={{ fontSize: 12, color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <MessageSquare size={13} /> Απευθείας κανάλι επικοινωνίας
+        </span>
+      </div>
+
+      {/* Chat Messages Panel */}
+      <div style={{
+        flex: 1,
+        border: '1px solid var(--border)',
+        background: 'var(--bg)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        boxShadow: 'var(--sh)'
+      }}>
+        
+        {/* Scrollable Message History */}
+        <div style={{
+          flex: 1,
+          padding: 20,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14
+        }}>
+          {messages.map((m, i) => {
+            const isPatient = m.sender === 'patient';
+            return (
+              <div
+                key={i}
+                style={{
+                  alignSelf: isPatient ? 'flex-end' : 'flex-start',
+                  maxWidth: '70%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: isPatient ? 'flex-end' : 'flex-start',
+                  animation: 'fadeIn 0.15s ease-out'
+                }}
+              >
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 'var(--r-lg)',
+                    background: isPatient ? 'var(--primary)' : 'var(--surface-2)',
+                    color: isPatient ? '#fff' : 'var(--ink)',
+                    fontSize: 13.5,
+                    lineHeight: 1.45,
+                    boxShadow: 'var(--sh)',
+                  }}
+                >
+                  {m.text}
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>
+                  {m.time}
+                </span>
+              </div>
+            );
+          })}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Form Input */}
+        <form onSubmit={handleSend} style={{
+          padding: 14,
+          borderTop: '1px solid var(--border)',
+          display: 'flex',
+          gap: 10,
+          background: 'var(--surface)'
+        }}>
+          <input
+            type="text"
+            placeholder="Πληκτρολογήστε ένα μήνυμα για τον ιατρό σας..."
+            value={inputText}
+            onChange={e => setInputText(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '9px 14px',
+              fontSize: 14,
+              border: '1px solid var(--border-s)',
+              borderRadius: 'var(--r)',
+              background: 'var(--bg)',
+              color: 'var(--ink)',
+              outline: 'none',
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '8px 16px',
+              background: 'var(--primary)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--r)',
+              cursor: 'pointer',
+              fontSize: 13.5,
+              fontWeight: 600,
+              gap: 6,
+              transition: 'background 0.15s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'oklch(from var(--primary) calc(l - 0.05) c h)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--primary)'}
+          >
+            <Send size={14} /> Αποστολή
+          </button>
+        </form>
+
+      </div>
+    </div>
+  );
+};
+
 // ── Main Portal Component ─────────────────────────────────────
 export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser }) => {
   const [activeTab, setActiveTab] = useState<PortalTab>('Αρχική');
@@ -714,6 +1031,7 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
   const [observations, setObservations] = useState<Observation[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [medState, setMedState] = useState<boolean[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -734,10 +1052,11 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
         setPatient(myPatient);
 
         if (myPatient) {
-          const [obs, meds, conds] = await Promise.all([
+          const [obs, meds, conds, reps] = await Promise.all([
             ctApi.getObservations(myPatient.id),
             ctApi.getMedications(myPatient.id),
             ctApi.getConditions(myPatient.id),
+            ctApi.getReports(myPatient.id),
           ]);
           if (!active) return;
           setObservations(obs ?? []);
@@ -745,6 +1064,7 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
           setMedications(activeMeds);
           setMedState(new Array(activeMeds.length).fill(false));
           setConditions(conds ?? []);
+          setReports(reps ?? []);
         }
       } catch (err) {
         if (active) setError('Αδυναμία φόρτωσης δεδομένων. Παρακαλώ δοκιμάστε αργότερα.');
@@ -763,14 +1083,14 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
   const bpTrend = useMemo(() => {
     const sysObs = observations
       .filter(o => o.type === 'systolic_bp')
-      .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+      .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
     return sysObs.slice(-14).map(o => Math.round(o.value));
   }, [observations]);
 
   const diaTrend = useMemo(() => {
     const diaObs = observations
       .filter(o => o.type === 'diastolic_bp')
-      .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+      .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
     return diaObs.slice(-14).map(o => Math.round(o.value));
   }, [observations]);
 
@@ -779,7 +1099,7 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
     return `${bpTrend[bpTrend.length - 1]}/${diaTrend[diaTrend.length - 1]}`;
   }, [bpTrend, diaTrend]);
 
-  const doctorName = patient?.assignedDoctor?.name ?? '—';
+  const doctorName = patient?.assigned_doctor?.name ?? '—';
 
   const handleLogout = () => {
     (window as unknown as { ctLogout?: () => void }).ctLogout?.();
@@ -832,8 +1152,11 @@ export const Portal: React.FC<PortalProps> = ({ navigate: _navigate, currentUser
             {activeTab === 'Ραντεβού' && (
               <PortalAppointmentsTab doctorName={doctorName} />
             )}
+            {activeTab === 'Μηνύματα' && (
+              <PortalMessagesTab patient={patient} currentUser={currentUser} />
+            )}
             {activeTab === 'Αναφορές' && (
-              <PortalReportsTab conditions={conditions} />
+              <PortalReportsTab conditions={conditions} reports={reports} />
             )}
           </>
         )}

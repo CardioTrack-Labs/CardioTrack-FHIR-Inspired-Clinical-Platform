@@ -162,7 +162,13 @@ class CardioTrackApiClient {
   async createObservation(patientId: number, type: string, value: number, unit: string, notes: string = ''): Promise<Observation> {
     return await this.request<Observation>(`/patients/${patientId}/observations`, {
       method: 'POST',
-      body: JSON.stringify({ type, value, unit, notes }),
+      body: JSON.stringify({
+        type,
+        value,
+        unit,
+        notes,
+        recorded_at: new Date().toISOString(),
+      }),
     });
   }
 
@@ -209,6 +215,31 @@ class CardioTrackApiClient {
       body: formData,
     });
   }
+
+  // ── Authentication Registration ──────────────────────────────────
+  async register(email: string, password: string, name: string): Promise<{ message: string }> {
+    return await this.request<{ message: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, name }),
+    });
+  }
+
+  // ── Admin Endpoints ─────────────────────────────────────────────
+  async getAdminUsers(): Promise<User[]> {
+    return await this.request<User[]>('/admin/users');
+  }
+
+  async changeUserRole(userId: number, role: 'patient' | 'doctor' | 'cardiologist' | 'admin'): Promise<{ message: string }> {
+    return await this.request<{ message: string }>(`/admin/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async getAdminStats(): Promise<{ total_users: number; total_patients: number; total_observations: number }> {
+    return await this.request<{ total_users: number; total_patients: number; total_observations: number }>('/admin/stats');
+  }
 }
 
 export const ctApi = new CardioTrackApiClient();
+
