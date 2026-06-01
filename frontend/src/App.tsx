@@ -3,6 +3,7 @@ import { Login } from './pages/Login';
 import { Patients } from './pages/Patients';
 import { Profile } from './pages/Profile';
 import { Portal } from './pages/Portal';
+import { HeartScore } from './pages/HeartScore';
 import { ctApi } from './lib/api';
 import { User } from './types/fhir';
 
@@ -97,6 +98,13 @@ export const App: React.FC = () => {
       )}
       {route.page === 'portal' && (
         <Portal navigate={navigate} currentUser={currentUser} />
+      )}
+      {route.page === 'heart' && (
+        <HeartScore
+          patientId={Number(route.params.patientId)}
+          navigate={navigate}
+          currentUser={currentUser}
+        />
       )}
     </div>
   );

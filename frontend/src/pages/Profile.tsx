@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ctApi } from '../lib/api';
-import { User, Patient, Observation, Condition, Medication, ObservationType } from '../types/fhir';
+import { User, Patient, Observation, Condition, Medication, ObservationType, RiskAssessment } from '../types/fhir';
 import {
   CTBtn,
   CTBadge,
@@ -476,6 +476,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [activeTab, setActiveTab] = useState('Overview');
+  const [riskAssessments, setRiskAssessments] = useState<RiskAssessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -506,11 +507,12 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         setLoading(true);
         setError(null);
 
-        const [pData, oData, cData, mData] = await Promise.all([
+        const [pData, oData, cData, mData, rData] = await Promise.all([
           ctApi.getPatient(patientId),
           ctApi.getObservations(patientId),
           ctApi.getConditions(patientId),
           ctApi.getMedications(patientId),
+          ctApi.getRiskAssessments(patientId),
         ]);
 
         if (active) {
@@ -518,6 +520,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
           setObservations(oData || []);
           setConditions(cData || []);
           setMedications(mData || []);
+          setRiskAssessments(rData || []);
         }
       } catch (err: unknown) {
         if (active) {
@@ -536,6 +539,12 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
       active = false;
     };
   }, [patientId]);
+
+  const latestHeartScore = useMemo(() => {
+    const heartAssessments = riskAssessments.filter(ra => ra.score_type === 'HEART');
+    if (heartAssessments.length === 0) return null;
+    return heartAssessments[0];
+  }, [riskAssessments]);
 
   const pName = patient && patient.user ? patient.user.name : 'Unknown';
   const pInitials = patient && patient.user ? pName.split(' ').map(n => n[0]).join('') : 'UN';
@@ -815,10 +824,23 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
             <CTInfoRow label="Ομάδα" value={patient.blood_type || 'O+'} mono />
           </div>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-            <CTRiskBadge score={6} category="moderate" />
-            <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
-              Μέτριος κίνδυνος MACE. Νοσηλεία & serial troponins.
-            </div>
+            {latestHeartScore ? (
+              <>
+                <CTRiskBadge score={latestHeartScore.score_value} category={latestHeartScore.risk_category} />
+                <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                  {latestHeartScore.recommendation || 'Clinical recommendation not provided.'}
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: '12px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r)', textAlign: 'center' }}>
+                <div style={{ fontSize: 12.5, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>
+                  No HEART Assessment
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+                  Calculate ACS risk score
+                </div>
+              </div>
+            )}
           </div>
           <div
             style={{
@@ -831,6 +853,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
           >
             <CTBtn label="+ Observation" full onClick={() => setObsModalOpen(true)} />
             <CTBtn label="Συνταγογράφηση" variant="secondary" full onClick={() => setMedModalOpen(true)} />
+            <CTBtn label="⬡ HEART Score" variant="ghost" full onClick={() => navigate('heart', { patientId })} />
             <CTBtn label="ECG Analysis" variant="ghost" full onClick={() => setActiveTab('ECG')} />
           </div>
           <div style={{ padding: '16px 20px' }}>

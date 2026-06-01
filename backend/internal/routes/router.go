@@ -27,6 +27,7 @@ func RegisterRoutes(r *gin.Engine) {
 			obsHandler := handlers.NewObservationHandler()
 			condHandler := handlers.NewConditionHandler()
 			medHandler := handlers.NewMedicationHandler()
+			riskHandler := handlers.NewRiskAssessmentHandler()
 
 			// Patient (self) profile — accessible to all authenticated roles
 			patients.GET("/me", patientHandler.GetMyProfile)
@@ -54,6 +55,9 @@ func RegisterRoutes(r *gin.Engine) {
 				patientData.POST("/medications", middleware.RequireRole("doctor", "cardiologist", "admin"), medHandler.CreateMedication)
 				patientData.GET("/medications", medHandler.ListMedications)
 				patientData.GET("/medications/:med_id", medHandler.GetMedication)
+
+				patientData.POST("/risk-assessments", middleware.RequireRole("doctor", "cardiologist", "admin"), riskHandler.CreateRiskAssessment)
+				patientData.GET("/risk-assessments", riskHandler.ListRiskAssessments)
 			}
 			
 			adminGroup := protected.Group("/admin", middleware.RequireRole("admin"))

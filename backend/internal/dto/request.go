@@ -49,3 +49,11 @@ type CreateMedicationRequest struct {
 	EndDate   string `json:"end_date"`                      // YYYY-MM-DD
 	Status    string `json:"status" binding:"required"`     // active, discontinued
 }
+
+type CreateRiskAssessmentRequest struct {
+	ScoreType      string `json:"score_type" binding:"required"`
+	ScoreValue     int    `json:"score_value"`
+	RiskCategory   string `json:"risk_category" binding:"required"`
+	Recommendation string `json:"recommendation"`
+}
+
