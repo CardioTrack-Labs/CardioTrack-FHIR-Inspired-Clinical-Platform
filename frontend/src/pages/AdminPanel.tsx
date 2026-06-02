@@ -160,7 +160,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ navigate, currentUser })
       </div>
 
       {/* ── Main Layout ──────────────────────────────────────── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }} className="max-md:!flex-col max-md:!overflow-auto">
         
         {/* Sidebar Nav */}
         <div
@@ -173,6 +173,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ navigate, currentUser })
             flexDirection: 'column',
             paddingTop: 16,
           }}
+          className="max-md:!w-full max-md:!flex-row max-md:!pt-0 max-md:!border-r-0 max-md:!border-b max-md:!overflow-x-auto max-md:!scrollbar-none max-md:!whitespace-nowrap"
         >
           <div
             style={{
@@ -184,6 +185,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ navigate, currentUser })
               padding: '0 18px',
               marginBottom: 6,
             }}
+            className="max-md:!hidden"
           >
             Διαχειριστής
           </div>
@@ -204,6 +206,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ navigate, currentUser })
               textAlign: 'left',
               cursor: 'default',
             }}
+            className="max-md:!w-auto max-md:!py-3 max-md:!px-4 max-md:!border-l-0 max-md:!border-b-2 max-md:!border-b-[var(--primary)] max-md:flex-shrink-0"
           >
             <Users size={16} /> Χρήστες &amp; Ρόλοι
           </button>
@@ -226,6 +229,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ navigate, currentUser })
               cursor: 'pointer',
               transition: 'all 0.15s',
             }}
+            className="max-md:!w-auto max-md:!py-3 max-md:!px-4 max-md:!border-l-0 max-md:!border-b-2 max-md:!border-b-transparent max-md:flex-shrink-0"
             onMouseEnter={e => {
               (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)';
               (e.currentTarget as HTMLButtonElement).style.color = 'var(--ink)';
@@ -238,7 +242,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ navigate, currentUser })
             <Activity size={16} /> Λίστα Ασθενών
           </button>
 
-          <div style={{ marginTop: 'auto', padding: '18px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ marginTop: 'auto', padding: '18px', borderTop: '1px solid var(--border)' }} className="max-md:!hidden">
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--ink-3)' }}>
               <Database size={13} />
               <span>Supabase DB Pool Active</span>
@@ -247,7 +251,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ navigate, currentUser })
         </div>
 
         {/* ── Main Content Pane ───────────────────────────────── */}
-        <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ flex: 1, padding: '24px 32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 }} className="max-md:!p-4 max-md:!overflow-visible">
           
           {/* Welcome and Reload Banner */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -290,7 +294,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ navigate, currentUser })
           )}
 
           {/* ── System Stats Grid ─────────────────────────────── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }} className="max-md:!grid-cols-1 max-md:!gap-3">
             {/* Total Users Card */}
             <div
               style={{
@@ -416,7 +420,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ navigate, currentUser })
               </div>
 
               {/* Role filter pills */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }} className="max-md:!w-full max-md:!overflow-x-auto max-md:!pb-1 max-md:!scrollbar-none max-md:!whitespace-nowrap max-md:!flex-nowrap">
                 <span style={{ fontSize: 12.5, color: 'var(--ink-3)', fontWeight: 500, marginRight: 4, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <Filter size={13} /> Φίλτρο:
                 </span>

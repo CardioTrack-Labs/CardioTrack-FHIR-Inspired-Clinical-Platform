@@ -157,6 +157,7 @@ const MessagesView: React.FC<{ currentUser: User | null }> = ({ currentUser }) =
   const [activeId, setActiveId] = useState(5);
   const [inputText, setInputText] = useState('');
   const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
 
   const activeThread = threads.find(t => t.id === activeId) || threads[0];
 
@@ -252,12 +253,13 @@ const MessagesView: React.FC<{ currentUser: User | null }> = ({ currentUser }) =
   const handleThreadSelect = (id: number) => {
     setActiveId(id);
     setThreads(prev => prev.map(t => t.id === id ? { ...t, unread: false } : t));
+    setMobileShowChat(true);
   };
 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', animation: 'fadeIn 0.2s ease-in-out' }}>
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 20 }} className={mobileShowChat ? 'max-md:hidden' : ''}>
         <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--ink)', letterSpacing: -0.3, margin: 0 }}>
           Κλινική Επικοινωνία
         </h1>
@@ -266,9 +268,9 @@ const MessagesView: React.FC<{ currentUser: User | null }> = ({ currentUser }) =
         </p>
       </div>
 
-      <div style={{ display: 'flex', flex: 1, gap: 20, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, gap: 20, overflow: 'hidden' }} className="max-md:!flex-col max-md:!overflow-auto">
         {/* Left Column - Thread List */}
-        <div style={{ width: 280, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        <div style={{ width: 280, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }} className={`max-md:!w-full max-md:flex-shrink-0 ${mobileShowChat ? 'max-md:!hidden' : ''}`}>
           {threads.map(t => {
             const isSel = t.id === activeId;
             const initials = t.name.split(' ').map(n => n[0]).join('');
@@ -310,17 +312,35 @@ const MessagesView: React.FC<{ currentUser: User | null }> = ({ currentUser }) =
         </div>
 
         {/* Right Column - Chat Pane */}
-        <div style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className={`max-md:!w-full max-md:!h-full ${!mobileShowChat ? 'max-md:!hidden' : ''}`}>
           
           {/* Active Chat Header */}
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <span style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--ink)' }}>{activeThread.name}</span>
-              <span style={{ marginLeft: 8 }}>
-                <CTBadge label={activeThread.status === 'critical' ? 'Κρίσιμος' : activeThread.status === 'doctor' ? 'Συνάδελφος' : 'Σταθερός'} variant={activeThread.status === 'critical' ? 'high' : activeThread.status === 'doctor' ? 'pending' : 'normal'} />
-              </span>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="max-md:!px-3">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                onClick={() => setMobileShowChat(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--primary)',
+                  fontSize: 18,
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  marginLeft: -8,
+                  fontFamily: 'var(--font)',
+                }}
+                className="md:hidden font-semibold"
+              >
+                ←
+              </button>
+              <div>
+                <span style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--ink)' }}>{activeThread.name}</span>
+                <span style={{ marginLeft: 8 }}>
+                  <CTBadge label={activeThread.status === 'critical' ? 'Κρίσιμος' : activeThread.status === 'doctor' ? 'Συνάδελφος' : 'Σταθερός'} variant={activeThread.status === 'critical' ? 'high' : activeThread.status === 'doctor' ? 'pending' : 'normal'} />
+                </span>
+              </div>
             </div>
-            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>HL7 Patient Consultation Channel</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)' }} className="max-md:!hidden">HL7 Patient Consultation Channel</span>
           </div>
 
           {/* Message History */}
@@ -440,7 +460,8 @@ const GlobalReportsView: React.FC<{ patients: MappedPatient[]; navigate: (page: 
       </div>
 
       <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--sh)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13.5 }}>
+        <div className="overflow-x-auto">
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13.5 }}>
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', color: 'var(--ink-3)', fontWeight: 600 }}>
               <th style={{ padding: '12px 16px' }}>Τίτλος Εξέτασης</th>
@@ -510,6 +531,7 @@ const GlobalReportsView: React.FC<{ patients: MappedPatient[]; navigate: (page: 
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 };
@@ -675,12 +697,13 @@ const NavBar: React.FC<NavBarProps> = ({ alertCount, currentUser }) => {
         flexShrink: 0,
         borderBottom: '1px solid var(--nav-border)',
       }}
+      className="max-md:!px-3 max-md:!gap-2"
     >
       <span style={{ fontWeight: 700, fontSize: 16, color: 'oklch(90% 0.04 245)', letterSpacing: 0.3 }}>
         CardioTrack
       </span>
-      <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.18)', margin: '0 6px' }} />
-      <span style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)' }}>Ασθενείς</span>
+      <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.18)', margin: '0 6px' }} className="max-md:!hidden" />
+      <span style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)' }} className="max-md:!hidden">Ασθενείς</span>
       <div style={{ flex: 1 }} />
       {alertCount > 0 && (
         <span
@@ -697,7 +720,7 @@ const NavBar: React.FC<NavBarProps> = ({ alertCount, currentUser }) => {
           ● {alertCount} ειδοποιήσεις
         </span>
       )}
-      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginLeft: 10 }}>{name}</span>
+      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginLeft: 10 }} className="max-md:!hidden">{name}</span>
       <CTAvatar initials={initials} size={32} bg="oklch(30% 0.06 255)" color="oklch(80% 0.08 245)" border="oklch(40% 0.07 255)" />
       <button
         onClick={() => (window as unknown as { ctLogout?: () => void }).ctLogout?.()}
@@ -742,6 +765,7 @@ const DocNav: React.FC<DocNavProps> = ({ active, currentUser, navigate, onChange
         flexDirection: 'column',
         paddingTop: 16,
       }}
+      className="max-md:!w-full max-md:!flex-row max-md:!pt-0 max-md:!border-r-0 max-md:!border-b max-md:!overflow-x-auto max-md:!scrollbar-none max-md:!whitespace-nowrap"
     >
       <div
         style={{
@@ -753,6 +777,7 @@ const DocNav: React.FC<DocNavProps> = ({ active, currentUser, navigate, onChange
           padding: '0 18px',
           marginBottom: 6,
         }}
+        className="max-md:!hidden"
       >
         {label}
       </div>
@@ -779,6 +804,7 @@ const DocNav: React.FC<DocNavProps> = ({ active, currentUser, navigate, onChange
               width: '100%',
               transition: 'background 0.12s, color 0.12s',
             }}
+            className={`max-md:!w-auto max-md:!py-3 max-md:!px-4 max-md:!border-r-0 max-md:!border-b-2 max-md:flex-shrink-0 ${on ? 'max-md:!border-b-[var(--primary)]' : 'max-md:!border-b-transparent'}`}
           >
             {item.label}
           </button>
@@ -806,6 +832,7 @@ const DocNav: React.FC<DocNavProps> = ({ active, currentUser, navigate, onChange
             transition: 'background 0.12s, color 0.12s',
             marginTop: 12,
           }}
+          className="max-md:!w-auto max-md:!m-0 max-md:!border-l-0 max-md:!border-b-2 max-md:!border-b-[var(--primary)] max-md:flex-shrink-0"
         >
           ⚙️ Διαχείριση
         </button>
@@ -830,7 +857,7 @@ const StatsStrip: React.FC<{ patients: MappedPatient[] }> = ({ patients }) => {
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 26 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 26 }} className="max-md:!grid-cols-1 max-md:!gap-3">
       {stats.map(s => (
         <div
           key={s.label}
@@ -885,7 +912,7 @@ interface ToolbarProps {
 const Toolbar: React.FC<ToolbarProps> = ({ search, onSearch, filter, onFilter, sort, onSort }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-      <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 320 }}>
+      <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 320 }} className="max-md:!max-w-none max-md:!w-full max-md:!flex-none">
         <span
           style={{
             position: 'absolute',
@@ -916,7 +943,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ search, onSearch, filter, onFilter, s
           }}
         />
       </div>
-      <div style={{ display: 'flex', gap: 5 }}>
+      <div style={{ display: 'flex', gap: 5 }} className="max-md:!w-full max-md:!overflow-x-auto max-md:!pb-1 max-md:!scrollbar-none max-md:!whitespace-nowrap max-md:!flex-nowrap">
         {FILTER_OPTS.map(f => (
           <button
             key={f}
@@ -953,6 +980,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ search, onSearch, filter, onFilter, s
           cursor: 'pointer',
           outline: 'none',
         }}
+        className="max-md:!w-full"
       >
         {SORT_OPTS.map(o => (
           <option key={o.value} value={o.value}>
@@ -1070,7 +1098,8 @@ const PatientTable: React.FC<PatientTableProps> = ({ patients, navigate }) => {
         boxShadow: 'var(--sh)',
       }}
     >
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+      <div className="overflow-x-auto">
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
         <thead>
           <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
             {COLS.map(c => (
@@ -1225,6 +1254,7 @@ const PatientTable: React.FC<PatientTableProps> = ({ patients, navigate }) => {
         </tbody>
       </table>
     </div>
+  </div>
   );
 };
 
@@ -1392,9 +1422,9 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
       <NavBar alertCount={totalAlerts} currentUser={currentUser} />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }} className="max-md:!flex-col max-md:!overflow-auto">
         <DocNav active={activeTab} currentUser={currentUser} navigate={navigate} onChangeTab={setActiveTab} />
-        <main style={{ flex: 1, overflow: 'auto', padding: '28px 32px' }}>
+        <main style={{ flex: 1, overflow: 'auto', padding: '28px 32px' }} className="max-md:!p-4 max-md:!overflow-visible">
           
           {activeTab === 'patients' && (
             <>
