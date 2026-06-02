@@ -172,7 +172,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: 'var(--font)' }}>
+    <div style={{ display: 'flex', height: '100vh', fontFamily: 'var(--font)' }} className="max-md:!flex-col">
 
       {/* ── Left brand panel ─────────────────────────────── */}
       <div
@@ -186,6 +186,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           position: 'relative',
           overflow: 'hidden',
         }}
+        className="max-md:!hidden"
       >
         {/* Logo */}
         <div style={{ marginBottom: 'auto' }}>
@@ -276,6 +277,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           justifyContent: 'center',
           padding: '48px',
         }}
+        className="max-md:!p-6"
       >
         <div style={{ width: '100%', maxWidth: 430 }}>
 

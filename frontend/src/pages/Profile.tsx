@@ -77,7 +77,8 @@ const DataTable = ({ cols, rows }: { cols: string[]; rows: React.ReactNode[][] }
         boxShadow: 'var(--sh)',
       }}
     >
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+      <div className="overflow-x-auto">
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
         <thead>
           <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
             {cols.map(c => (
@@ -123,7 +124,8 @@ const DataTable = ({ cols, rows }: { cols: string[]; rows: React.ReactNode[][] }
             </tr>
           ))}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   );
 };
@@ -650,7 +652,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         patientId,
         newCondCode.trim(),
         newCondDesc.trim(),
-        new Date().toISOString(),
+        new Date().toISOString().split('T')[0],
         newCondStatus
       );
       setConditions(prev => [newCond, ...prev]);
@@ -674,7 +676,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         newMedName.trim(),
         newMedDose.trim(),
         newMedFreq.trim() || '1× / ημέρα',
-        new Date().toISOString(),
+        new Date().toISOString().split('T')[0],
         '',
         'active'
       );
@@ -799,11 +801,12 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
           flexShrink: 0,
           borderBottom: '1px solid var(--nav-border)',
         }}
+        className="max-md:!px-3 max-md:!gap-2"
       >
         <span style={{ fontWeight: 700, fontSize: 16, color: 'oklch(90% 0.04 245)', letterSpacing: 0.3 }}>
           CardioTrack
         </span>
-        <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.18)', margin: '0 6px' }} />
+        <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.18)', margin: '0 6px' }} className="max-md:!hidden" />
         <button
           onClick={() => navigate('patients')}
           style={{
@@ -820,10 +823,10 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         >
           Ασθενείς
         </button>
-        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>▶</span>
-        <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>{pName}</span>
+        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }} className="max-md:!hidden">▶</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }} className="max-md:!hidden">{pName}</span>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginRight: 10 }}>
+        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginRight: 10 }} className="max-md:!hidden">
           {currentUser ? currentUser.name : 'Δρ. Νικολάου'}
         </span>
         <CTAvatar
@@ -835,7 +838,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         />
       </div>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }} className="max-md:!flex-col max-md:!overflow-auto">
         {/* Left Sidebar */}
         <div
           style={{
@@ -847,6 +850,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
             flexDirection: 'column',
             overflow: 'auto',
           }}
+          className="max-md:!w-full max-md:!border-r-0 max-md:!border-b"
         >
           <div
             style={{
@@ -943,7 +947,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
         </div>
 
         {/* Central Content Area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }} className="max-md:!overflow-visible">
           {/* Tabbed Navigation Header */}
           <div
             style={{
@@ -953,6 +957,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
               paddingLeft: 32,
               flexShrink: 0,
             }}
+            className="max-md:!pl-4 max-md:overflow-x-auto max-md:whitespace-nowrap max-md:scrollbar-none"
           >
             {TABS.map(tab => (
               <button
@@ -1013,7 +1018,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                     <VitalsChart observations={observations} mode="bp" />
                   </ChartCard>
                 </section>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }} className="max-md:!grid-cols-1 max-md:!gap-6">
                   <section>
                     <CTSectionHead
                       title="Διαγνώσεις"
@@ -1216,7 +1221,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                     <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{c.description}</span>,
                     <CTBadge label={c.status} variant={c.status} />,
                     <span style={{ color: 'var(--ink-3)', fontSize: 12.5 }}>
-                      {new Date(c.onsetDate).toLocaleDateString('el-GR', {
+                      {new Date(c.onset_date).toLocaleDateString('el-GR', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
@@ -1241,7 +1246,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                     <span style={{ fontFamily: 'var(--mono)', color: 'var(--ink-2)' }}>{m.dosage}</span>,
                     m.frequency,
                     <span style={{ color: 'var(--ink-3)', fontSize: 12.5 }}>
-                      {new Date(m.startDate).toLocaleDateString('el-GR', {
+                      {new Date(m.start_date).toLocaleDateString('el-GR', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
@@ -1433,7 +1438,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                     </div>
                   </div>
                   <CTSectionHead title="HRV Metrics" />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }} className="max-md:!grid-cols-1 max-md:!gap-3">
                     <CTVitalCard label="Mean HR" value="88" unit="bpm" />
                     <CTVitalCard label="SDNN" value="45" unit="ms" />
                     <CTVitalCard label="RMSSD" value="28" unit="ms" />

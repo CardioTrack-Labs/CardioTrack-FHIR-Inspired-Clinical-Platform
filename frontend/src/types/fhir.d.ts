@@ -45,7 +45,7 @@ export interface Condition {
   icd10Code: string;
   description: string;
   status: 'active' | 'resolved' | 'chronic';
-  onsetDate: string;
+  onset_date: string;
 }
 
 export interface Medication {
@@ -54,8 +54,8 @@ export interface Medication {
   name: string;
   dosage: string;
   frequency: string;
-  startDate: string;
-  endDate?: string;
+  start_date: string;
+  end_date?: string;
   status: 'active' | 'discontinued';
 }
 

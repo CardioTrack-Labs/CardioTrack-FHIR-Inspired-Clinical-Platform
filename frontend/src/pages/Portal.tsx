@@ -92,17 +92,17 @@ const PortalNavBar: React.FC<NavBarProps> = ({ patient, onLogout }) => {
       background: 'var(--nav)', padding: '0 24px',
       height: 52, flexShrink: 0,
       borderBottom: '1px solid var(--nav-border)',
-    }}>
+    }} className="max-md:!px-3 max-md:!gap-2">
       <span style={{ fontWeight: 700, fontSize: 16, color: 'oklch(90% 0.04 245)', letterSpacing: 0.3 }}>
         CardioTrack
       </span>
-      <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.18)', margin: '0 6px' }} />
-      <span style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)' }}>Η υγεία μου</span>
+      <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.18)', margin: '0 6px' }} className="max-md:!hidden" />
+      <span style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)' }} className="max-md:!hidden">Η υγεία μου</span>
       <div style={{ flex: 1 }} />
       {doctorName !== '—' && (
         <>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginRight: 4 }}>Γιατρός:</span>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginRight: 8 }}>{doctorName}</span>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginRight: 4 }} className="max-md:!hidden">Γιατρός:</span>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginRight: 8 }} className="max-md:!hidden">{doctorName}</span>
         </>
       )}
       <CTAvatar initials={initials || 'ΑΣ'} size={32} />
@@ -125,7 +125,7 @@ const PortalNavBar: React.FC<NavBarProps> = ({ patient, onLogout }) => {
 
 // ── Tab Bar ───────────────────────────────────────────────────
 const PortalTabBar: React.FC<{ active: PortalTab; onChange: (t: PortalTab) => void }> = ({ active, onChange }) => (
-  <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg)', paddingLeft: 32, flexShrink: 0 }}>
+  <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg)', paddingLeft: 32, flexShrink: 0 }} className="max-md:!pl-4 max-md:overflow-x-auto max-md:whitespace-nowrap max-md:scrollbar-none">
     {PORTAL_TABS.map(tab => (
       <button
         key={tab}
@@ -139,6 +139,7 @@ const PortalTabBar: React.FC<{ active: PortalTab; onChange: (t: PortalTab) => vo
           borderBottom: `2px solid ${active === tab ? 'var(--primary)' : 'transparent'}`,
           marginBottom: -1, transition: 'color 0.15s',
         }}
+        className="max-md:flex-shrink-0 max-md:!px-4"
       >
         {tab}
       </button>
@@ -292,7 +293,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
         </section>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22 }} className="max-md:!grid-cols-1 max-md:!gap-4">
         {/* BP trend */}
         {bpTrend.length > 0 && (
           <section>
@@ -669,7 +670,7 @@ const PortalReportsTab: React.FC<PortalReportsTabProps> = ({ conditions, reports
                   <div style={{ fontWeight: 500, fontSize: 14 }}>{c.description}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>
                     {c.icd10Code} · {c.status === 'active' ? 'Ενεργή' : c.status === 'chronic' ? 'Χρόνια' : 'Αντιμετωπίστηκε'}
-                    {c.onsetDate && ` · από ${new Date(c.onsetDate).getFullYear()}`}
+                    {c.onset_date && ` · από ${new Date(c.onset_date).getFullYear()}`}
                   </div>
                 </div>
               </div>
