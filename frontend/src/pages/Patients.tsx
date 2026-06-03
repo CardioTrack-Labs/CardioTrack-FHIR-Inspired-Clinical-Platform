@@ -907,9 +907,10 @@ interface ToolbarProps {
   onFilter: (v: string) => void;
   sort: string;
   onSort: (v: string) => void;
+  onImportFHIRClick: () => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ search, onSearch, filter, onFilter, sort, onSort }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ search, onSearch, filter, onFilter, sort, onSort, onImportFHIRClick }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
       <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 320 }} className="max-md:!max-w-none max-md:!w-full max-md:!flex-none">
@@ -988,6 +989,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ search, onSearch, filter, onFilter, s
           </option>
         ))}
       </select>
+      <CTBtn label="Εισαγωγή από FHIR" variant="secondary" onClick={onImportFHIRClick} />
       <CTBtn label="+ Νέος Ασθενής" />
     </div>
   );
@@ -1258,6 +1260,66 @@ const PatientTable: React.FC<PatientTableProps> = ({ patients, navigate }) => {
   );
 };
 
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.45)',
+        backdropFilter: 'blur(5px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-lg)',
+          boxShadow: 'var(--sh-lg)',
+          width: '100%',
+          maxWidth: 440,
+          padding: '24px',
+          position: 'relative',
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            background: 'none',
+            border: 'none',
+            fontSize: 22,
+            cursor: 'pointer',
+            color: 'var(--ink-3)',
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+        <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>{title}</h3>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 // ── Patients Dashboard Page ───────────────────────────────────
 export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => {
   const [activeTab, setActiveTab] = useState('patients');
@@ -1268,68 +1330,86 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    const fetchPatients = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const filters: { doctor_id?: number } = {};
-        if (currentUser && currentUser.role === 'doctor') {
-          filters.doctor_id = currentUser.id;
-        }
+  // FHIR Ingestion states
+  const [fhirModalOpen, setFhirModalOpen] = useState(false);
+  const [fhirIdInput, setFhirIdInput] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState<{ success: boolean; message: string } | null>(null);
 
-        const data = await ctApi.getPatients(filters);
-        
-        if (active) {
-          const mapped: MappedPatient[] = data.map(p => {
-            const dob = new Date(p.date_of_birth);
-            const ageDiff = Date.now() - dob.getTime();
-            const ageDate = new Date(ageDiff);
-            const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-            
-            const name = p.user ? p.user.name : 'Unknown';
-            const nameParts = name.split(' ');
-            const initials = nameParts.map(n => n[0]).join('');
-
-            return {
-              id: p.medical_record_number || `MRN-${p.id}`,
-              dbId: p.id,
-              name: name,
-              initials,
-              age,
-              gender: p.gender === 'Male' ? 'Άνδρας' : p.gender === 'Female' ? 'Γυναίκα' : 'Άλλο',
-              blood: p.blood_type || 'O+',
-              primary: { code: 'I10', desc: 'Essential (primary) hypertension' },
-              lastObs: 'Σήμερα', 
-              daysAgo: 0,
-              bp: { sys: 120, dia: 80 }, 
-              hr: 72,
-              heart: { score: 4, cat: 'moderate' },
-              status: 'active', 
-              alerts: 0,
-            };
-          });
-          setPatients(mapped);
-        }
-      } catch (err: unknown) {
-        if (active) {
-          const msg = err instanceof Error ? err.message : 'Αποτυχία φόρτωσης ασθενών.';
-          setError(msg);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
+  const loadPatients = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const filters: { doctor_id?: number } = {};
+      if (currentUser && currentUser.role === 'doctor') {
+        filters.doctor_id = currentUser.id;
       }
-    };
 
-    fetchPatients();
-    return () => {
-      active = false;
-    };
+      const data = await ctApi.getPatients(filters);
+      
+      const mapped: MappedPatient[] = data.map(p => {
+        const dob = new Date(p.date_of_birth);
+        const ageDiff = Date.now() - dob.getTime();
+        const ageDate = new Date(ageDiff);
+        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+        
+        const name = p.user ? p.user.name : 'Unknown';
+        const nameParts = name.split(' ');
+        const initials = nameParts.map(n => n[0]).join('');
+
+        return {
+          id: p.medical_record_number || `MRN-${p.id}`,
+          dbId: p.id,
+          name: name,
+          initials,
+          age,
+          gender: p.gender === 'Male' ? 'Άνδρας' : p.gender === 'Female' ? 'Γυναίκα' : 'Άλλο',
+          blood: p.blood_type || 'O+',
+          primary: { code: 'I10', desc: 'Essential (primary) hypertension' },
+          lastObs: 'Σήμερα', 
+          daysAgo: 0,
+          bp: { sys: 120, dia: 80 }, 
+          hr: 72,
+          heart: { score: 4, cat: 'moderate' },
+          status: 'active', 
+          alerts: 0,
+        };
+      });
+      setPatients(mapped);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Αποτυχία φόρτωσης ασθενών.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPatients();
   }, [currentUser]);
+
+  const handleImportFHIR = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fhirIdInput.trim()) return;
+    
+    setIsImporting(true);
+    setImportStatus(null);
+    try {
+      const res = await ctApi.importFHIRPatient(fhirIdInput.trim());
+      setImportStatus({ success: true, message: res.message || 'Ο ασθενής εισήχθη με επιτυχία!' });
+      setFhirIdInput('');
+      // Reload the patient list
+      await loadPatients();
+    } catch (err: any) {
+      setImportStatus({
+        success: false,
+        message: err.message || 'Αποτυχία άντλησης από το HAPI FHIR Sandbox.'
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const totalAlerts = patients.reduce((s, p) => s + p.alerts, 0);
 
@@ -1450,6 +1530,7 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
                 onFilter={setFilter}
                 sort={sort}
                 onSort={setSort}
+                onImportFHIRClick={() => { setFhirModalOpen(true); setImportStatus(null); }}
               />
               <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 10 }}>
                 {filtered.length === patients.length
@@ -1467,6 +1548,78 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
 
         </main>
       </div>
+
+      {/* ── MODAL: Import from HAPI FHIR ── */}
+      <Modal isOpen={fhirModalOpen} onClose={() => setFhirModalOpen(false)} title="Εισαγωγή Ασθενή από HAPI FHIR Sandbox">
+        <p style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16 }}>
+          Χρησιμοποιείται το δημόσιο <strong>HAPI FHIR Server</strong> (<code>hapi.fhir.org/baseR4</code>) ως πηγή δεδομένων.
+          Εισαγάγετε ένα FHIR Patient ID για να εισαχθούν τα δημογραφικά στοιχεία και τυχόν διαθέσιμη ECG Observation.
+        </p>
+        <form onSubmit={handleImportFHIR}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+              FHIR Patient ID
+            </label>
+            <input
+              value={fhirIdInput}
+              onChange={e => setFhirIdInput(e.target.value)}
+              placeholder="π.χ. example, 123456, smart-1032702…"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                fontSize: 13.5,
+                border: '1px solid var(--border-s)',
+                borderRadius: 'var(--r)',
+                background: 'var(--bg)',
+                color: 'var(--ink)',
+                fontFamily: 'var(--mono)',
+                boxSizing: 'border-box',
+              }}
+              disabled={isImporting}
+            />
+          </div>
+          {importStatus && (
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 'var(--r)',
+                fontSize: 13,
+                marginBottom: 12,
+                background: importStatus.success ? 'var(--green-bg)' : 'var(--red-bg)',
+                border: `1px solid ${importStatus.success ? 'var(--green-bdr)' : 'var(--red-bdr)'}`,
+                color: importStatus.success ? 'var(--green)' : 'var(--red)',
+              }}
+            >
+              {importStatus.message}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={() => setFhirModalOpen(false)}
+              style={{
+                padding: '7px 16px', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+                border: '1px solid var(--border-s)', borderRadius: 'var(--r)',
+                background: 'var(--bg)', color: 'var(--ink-2)',
+              }}
+            >
+              Ακύρωση
+            </button>
+            <button
+              type="submit"
+              disabled={isImporting || !fhirIdInput.trim()}
+              style={{
+                padding: '7px 18px', fontSize: 13.5, fontWeight: 600, cursor: isImporting ? 'wait' : 'pointer',
+                border: '1px solid transparent', borderRadius: 'var(--r)',
+                background: 'var(--primary)', color: '#fff',
+                opacity: (isImporting || !fhirIdInput.trim()) ? 0.6 : 1,
+              }}
+            >
+              {isImporting ? 'Εισαγωγή…' : 'Εισαγωγή από FHIR'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

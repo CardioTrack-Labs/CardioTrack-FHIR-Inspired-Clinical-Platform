@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { ctApi } from '../lib/api';
 import { User, Patient, Observation, Condition, Medication, ObservationType, RiskAssessment, Report } from '../types/fhir';
 import {
@@ -10,6 +10,8 @@ import {
   CTSectionHead,
   CTVitalCard,
 } from '../components/ui';
+import { ECGWaveform } from '../components/ECGWaveform';
+import { BedsideMonitor } from '../components/BedsideMonitor';
 
 interface ProfileProps {
   patientId: number;
@@ -17,7 +19,7 @@ interface ProfileProps {
   currentUser: User | null;
 }
 
-const TABS = ['Overview', 'Vitals', 'Conditions', 'Medications', 'Reports', 'ECG'];
+const TABS = ['Overview', 'Vitals', 'Conditions', 'Medications', 'Reports', 'ECG', 'Monitor'];
 
 // ── Range Selector Component ──────────────────────────────────────────
 const RangeSelector = ({ active, onChange }: { active: string; onChange: (v: string) => void }) => {
@@ -508,6 +510,48 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
 
   const [modalLoading, setModalLoading] = useState(false);
 
+  // ECG State
+  const [ecgRecords, setEcgRecords] = useState<any[]>([]);
+  const [ecgLoading, setEcgLoading] = useState(false);
+  const [ecgUploadFile, setEcgUploadFile] = useState<File | null>(null);
+  const [ecgUploading, setEcgUploading] = useState(false);
+  const [ecgUploadStatus, setEcgUploadStatus] = useState<string | null>(null);
+  const [selectedEcgRecord, setSelectedEcgRecord] = useState<any | null>(null);
+  const ecgFileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadECGRecords = useCallback(async () => {
+    setEcgLoading(true);
+    try {
+      const records = await ctApi.getECGRecords(patientId);
+      setEcgRecords(records || []);
+      // Auto-select latest record that has an analysis
+      const done = (records || []).find((r: any) => r.processing_status === 'done' && r.analysis);
+      if (done) setSelectedEcgRecord(done);
+    } catch (e) {
+      console.error('Failed to load ECG records:', e);
+    } finally {
+      setEcgLoading(false);
+    }
+  }, [patientId]);
+
+  const handleECGUpload = async () => {
+    if (!ecgUploadFile) return;
+    setEcgUploading(true);
+    setEcgUploadStatus(null);
+    try {
+      await ctApi.uploadECG(patientId, ecgUploadFile);
+      setEcgUploadStatus('✓ Το αρχείο ECG μεταφορτώθηκε επιτυχώς. Η ανάλυση είναι σε εξέλιξη...');
+      setEcgUploadFile(null);
+      if (ecgFileInputRef.current) ecgFileInputRef.current.value = '';
+      // Refresh records
+      setTimeout(() => loadECGRecords(), 1500);
+    } catch (e: any) {
+      setEcgUploadStatus(`✗ Αποτυχία: ${e.message || 'Άγνωστο σφάλμα'}`);
+    } finally {
+      setEcgUploading(false);
+    }
+  };
+
   useEffect(() => {
     let active = true;
     const fetchPatientData = async () => {
@@ -567,6 +611,13 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
       active = false;
     };
   }, [patientId]);
+
+  // Load ECG records when ECG tab is first opened
+  useEffect(() => {
+    if (activeTab === 'ECG') {
+      loadECGRecords();
+    }
+  }, [activeTab, loadECGRecords]);
 
   const latestHeartScore = useMemo(() => {
     const heartAssessments = riskAssessments.filter(ra => ra.score_type === 'HEART');
@@ -724,7 +775,10 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
 
   const getReportIcon = (type: string) => {
     switch (type?.toUpperCase()) {
-      case 'ECG': return '♡';
+      case 'ECG':
+      case 'ECG ANALYSIS': return '♡';
+      case 'MONITOR':
+      case 'LIVE MONITOR': return '🔴';
       case 'LAB': return '◎';
       case 'IMAGING': return '⊡';
       case 'DISCHARGE': return '≡';
@@ -924,7 +978,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
             <CTBtn label="+ Observation" full onClick={() => setObsModalOpen(true)} />
             <CTBtn label="Συνταγογράφηση" variant="secondary" full onClick={() => setMedModalOpen(true)} />
             <CTBtn label="⬡ HEART Score" variant="ghost" full onClick={() => navigate('heart', { patientId })} />
-            <CTBtn label="ECG Analysis" variant="ghost" full onClick={() => setActiveTab('ECG')} />
+            <CTBtn label="ECG" variant="ghost" full onClick={() => setActiveTab('ECG')} />
           </div>
           <div style={{ padding: '16px 20px' }}>
             <div
@@ -978,17 +1032,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                   outline: 'none',
                 }}
               >
-                {tab === 'Overview'
-                  ? 'Επισκόπηση'
-                  : tab === 'Vitals'
-                  ? 'Vitals'
-                  : tab === 'Conditions'
-                  ? 'Διαγνώσεις'
-                  : tab === 'Medications'
-                  ? 'Φάρμακα'
-                  : tab === 'Reports'
-                  ? 'Αναφορές'
-                  : 'ECG'}
+                {tab}
               </button>
             ))}
           </div>
@@ -1362,108 +1406,197 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
               </div>
             )}
 
-            {/* TAB: ECG */}
+            {/* TAB: ECG — Real D3 Waveform + HRV */}
             {activeTab === 'ECG' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {/* Upload Section */}
                 <div>
                   <CTSectionHead
-                    title="Ανέβασμα ECG"
-                    action={<CTBadge label="Python microservice ready" variant="normal" />}
+                    title="Ανέβασμα ECG Αρχείου"
+                    action={<CTBadge label="Pan-Tompkins · HRV Engine" variant="normal" />}
                   />
                   <div
                     style={{
                       border: '2px dashed var(--border-s)',
                       borderRadius: 'var(--r-lg)',
-                      padding: '36px',
+                      padding: '28px',
                       textAlign: 'center',
                       background: 'var(--surface)',
-                      cursor: 'pointer',
                     }}
                   >
                     <div style={{ fontSize: 32, marginBottom: 10, color: 'var(--primary)' }}>♡</div>
-                    <div
-                      style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}
-                    >
-                      Drag & drop ECG file εδώ
+                    <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>
+                      {ecgUploadFile ? `Επιλέχθηκε: ${ecgUploadFile.name}` : 'Επιλέξτε ή σύρτε αρχείο ECG'}
                     </div>
-                    <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16 }}>
-                      Υποστηρίζει MIT-BIH format (.dat) ή CSV
+                    <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+                      Υποστηρίζει space-separated (.txt), CSV ή MIT-BIH format
                     </div>
-                    <CTBtn label="Επιλογή αρχείου" variant="secondary" />
-                  </div>
-                </div>
-                <div>
-                  <CTSectionHead title="Τελευταία ανάλυση — 12 Μαΐ 2025" action={<CTBadge label="done" variant="done" />} />
-                  <div
-                    style={{
-                      background: 'oklch(12% 0.01 240)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 'var(--r-lg)',
-                      padding: '18px 16px',
-                      marginBottom: 20,
-                      boxShadow: 'var(--sh)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: 'oklch(60% 0.01 240)',
-                        marginBottom: 10,
-                        fontFamily: 'var(--mono)',
-                      }}
-                    >
-                      Lead II · 10 sec · 500 Hz
-                    </div>
-                    <svg viewBox="0 0 860 100" style={{ width: '100%', height: 100, display: 'block' }}>
-                      <path
-                        d="M0,50 L60,50 L65,50 L67,20 L70,80 L74,10 L78,85 L82,50 L90,50 L150,50 L155,50 L157,20 L160,80 L164,10 L168,85 L172,50 L180,50 L240,50 L245,50 L247,20 L250,80 L254,10 L258,85 L262,50 L270,50 L330,50 L335,50 L337,20 L340,80 L344,10 L348,85 L352,50 L360,50 L420,50 L425,50 L427,20 L430,80 L434,10 L438,85 L442,50 L450,50 L510,50 L515,50 L517,20 L520,80 L524,10 L528,85 L532,50 L540,50 L600,50 L605,50 L607,20 L610,80 L614,10 L618,85 L622,50 L630,50 L690,50 L695,50 L697,20 L700,80 L704,10 L708,85 L712,50 L720,50 L780,50 L785,50 L787,20 L790,80 L794,10 L798,85 L802,50 L860,50"
-                        fill="none"
-                        stroke="oklch(64% 0.22 145)"
-                        strokeWidth={1.5}
-                        strokeLinecap="round"
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <input
+                        ref={ecgFileInputRef}
+                        type="file"
+                        accept=".txt,.csv,.dat"
+                        style={{ display: 'none' }}
+                        id="ecg-file-input"
+                        onChange={e => setEcgUploadFile(e.target.files?.[0] || null)}
                       />
-                      {[74, 164, 254, 344, 434, 524, 614, 704, 794].map((x, i) => (
-                        <circle key={i} cx={x} cy={50} r={3} fill="oklch(46% 0.22 25)" opacity={0.8} />
-                      ))}
-                    </svg>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: 'oklch(50% 0.01 240)',
-                        marginTop: 8,
-                        fontFamily: 'var(--mono)',
-                      }}
-                    >
-                      ● R-peaks ανιχνεύθηκαν: 9 · Pan-Tompkins algorithm
+                      <label
+                        htmlFor="ecg-file-input"
+                        style={{
+                          padding: '7px 16px', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+                          border: '1px solid var(--border-s)', borderRadius: 'var(--r)',
+                          background: 'var(--bg)', color: 'var(--ink-2)',
+                        }}
+                      >
+                        Επιλογή αρχείου
+                      </label>
+                      {ecgUploadFile && (
+                        <CTBtn
+                          label={ecgUploading ? 'Αποστολή…' : 'Αποστολή & Ανάλυση'}
+                          onClick={handleECGUpload}
+                          disabled={ecgUploading}
+                        />
+                      )}
                     </div>
-                  </div>
-                  <CTSectionHead title="HRV Metrics" />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }} className="max-md:!grid-cols-1 max-md:!gap-3">
-                    <CTVitalCard label="Mean HR" value="88" unit="bpm" />
-                    <CTVitalCard label="SDNN" value="45" unit="ms" />
-                    <CTVitalCard label="RMSSD" value="28" unit="ms" />
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 14,
-                      padding: '12px 16px',
-                      background: 'var(--green-bg)',
-                      border: '1px solid var(--green-bdr)',
-                      borderRadius: 'var(--r)',
-                      fontSize: 13,
-                    }}
-                  >
-                    <span style={{ fontWeight: 600, color: 'var(--green)' }}>HRV Ερμηνεία: Normal</span>
-                    <span style={{ color: 'var(--ink-2)', marginLeft: 10 }}>
-                      SDNN &gt; 50ms — κανονική καρδιαγγειακή λειτουργία
-                    </span>
+                    {ecgUploadStatus && (
+                      <div style={{
+                        marginTop: 14, fontSize: 13, padding: '8px 14px', borderRadius: 'var(--r)',
+                        color: ecgUploadStatus.startsWith('✓') ? 'var(--green)' : 'var(--red)',
+                        background: ecgUploadStatus.startsWith('✓') ? 'var(--green-bg)' : 'var(--red-bg)',
+                        border: `1px solid ${ecgUploadStatus.startsWith('✓') ? 'var(--green-bdr)' : 'var(--red-bdr)'}`,
+                      }}>
+                        {ecgUploadStatus}
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* ECG Record Selector */}
+                {ecgLoading ? (
+                  <div style={{ color: 'var(--ink-3)', fontSize: 13 }}>Φόρτωση αρχείων ECG…</div>
+                ) : ecgRecords.length > 0 ? (
+                  <div>
+                    <CTSectionHead
+                      title={`Αρχεία ECG (${ecgRecords.length})`}
+                      action={<CTBtn label="↻ Ανανέωση" variant="ghost" size="sm" onClick={loadECGRecords} />}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {ecgRecords.map((rec: any) => (
+                        <div
+                          key={rec.id}
+                          onClick={() => rec.processing_status === 'done' && rec.analysis && setSelectedEcgRecord(rec)}
+                          style={{
+                            padding: '10px 14px',
+                            border: `1px solid ${selectedEcgRecord?.id === rec.id ? 'var(--primary)' : 'var(--border)'}`,
+                            borderRadius: 'var(--r)',
+                            background: selectedEcgRecord?.id === rec.id ? 'var(--primary-bg)' : 'var(--surface)',
+                            cursor: rec.processing_status === 'done' && rec.analysis ? 'pointer' : 'default',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)' }}>
+                              ECG #{rec.id}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: 'var(--ink-3)', fontFamily: 'var(--mono)', marginTop: 2 }}>
+                              {new Date(rec.recorded_at).toLocaleString('el-GR')}
+                            </div>
+                          </div>
+                          <CTBadge
+                            label={rec.processing_status}
+                            variant={rec.processing_status === 'done' ? 'done' : rec.processing_status === 'failed' ? 'failed' : 'pending'}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--ink-3)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+                    Δεν υπάρχουν αρχεία ECG. Ανεβάστε ένα αρχείο για να ξεκινήσει η ανάλυση.
+                  </div>
+                )}
+
+                {/* D3 Waveform viewer */}
+                {selectedEcgRecord && selectedEcgRecord.analysis && (() => {
+                  let analysisData: any = {};
+                  try { analysisData = JSON.parse(selectedEcgRecord.analysis.analysis_json || '{}'); } catch {}
+                  const rawSignal = analysisData.raw_signal_preview || [];
+                  const filteredSignal = analysisData.filtered_signal_preview || [];
+                  const rPeaks = analysisData.r_peaks_preview || [];
+                  const hrv = selectedEcgRecord.analysis;
+
+                  return (
+                    <div>
+                      <CTSectionHead
+                        title={`Ανάλυση ECG #${selectedEcgRecord.id}`}
+                        action={<CTBadge label="done" variant="done" />}
+                      />
+
+                      {/* D3 Waveform */}
+                      {rawSignal.length > 0 ? (
+                        <div style={{ marginBottom: 20 }}>
+                          <ECGWaveform
+                            rawSignal={rawSignal}
+                            filteredSignal={filteredSignal}
+                            rPeaks={rPeaks}
+                            samplingRate={250}
+                          />
+                        </div>
+                      ) : (
+                        <div style={{
+                          padding: '24px', textAlign: 'center', color: 'var(--ink-3)',
+                          border: '1px dashed var(--border)', borderRadius: 'var(--r-lg)', marginBottom: 20,
+                        }}>
+                          Τα δεδομένα κυματομορφής δεν είναι διαθέσιμα στην ανάλυση αυτή.
+                        </div>
+                      )}
+
+                      {/* HRV Metrics */}
+                      <CTSectionHead title="HRV Metrics (Pan-Tompkins Algorithm)" />
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }} className="max-md:!grid-cols-1">
+                        <CTVitalCard label="Mean HR" value={hrv.heart_rate_mean?.toFixed(0) || '--'} unit="bpm" />
+                        <CTVitalCard label="SDNN" value={hrv.sdnn?.toFixed(1) || '--'} unit="ms" status={hrv.hrv_interpretation === 'poor' ? 'abnormal' : 'normal'} />
+                        <CTVitalCard label="RMSSD" value={hrv.rmssd?.toFixed(1) || '--'} unit="ms" />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }} className="max-md:!grid-cols-1">
+                        <CTVitalCard label="pNN50" value={hrv.pnn50?.toFixed(1) || '--'} unit="%" />
+                        <CTVitalCard label="Min HR" value={hrv.heart_rate_min?.toFixed(0) || '--'} unit="bpm" />
+                        <CTVitalCard label="Max HR" value={hrv.heart_rate_max?.toFixed(0) || '--'} unit="bpm" />
+                      </div>
+                      <div style={{
+                        padding: '12px 16px', marginBottom: 8,
+                        background: hrv.hrv_interpretation === 'normal' ? 'var(--green-bg)' : hrv.hrv_interpretation === 'reduced' ? 'var(--amber-bg)' : 'var(--red-bg)',
+                        border: `1px solid ${hrv.hrv_interpretation === 'normal' ? 'var(--green-bdr)' : hrv.hrv_interpretation === 'reduced' ? 'var(--amber-bdr)' : 'var(--red-bdr)'}`,
+                        borderRadius: 'var(--r)', fontSize: 13,
+                      }}>
+                        <span style={{ fontWeight: 600, color: hrv.hrv_interpretation === 'normal' ? 'var(--green)' : hrv.hrv_interpretation === 'reduced' ? 'var(--amber)' : 'var(--red)' }}>
+                          HRV Ερμηνεία: {hrv.hrv_interpretation === 'normal' ? 'Κανονική' : hrv.hrv_interpretation === 'reduced' ? 'Μειωμένη' : 'Φτωχή / Υψηλού Κινδύνου'}
+                        </span>
+                        <span style={{ color: 'var(--ink-2)', marginLeft: 10 }}>
+                          SDNN {hrv.sdnn?.toFixed(0)} ms · R-peaks: {hrv.r_peaks_count}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* TAB: Monitor — Live Bedside Telemetry */}
+            {activeTab === 'Monitor' && (
+              <div>
+                <CTSectionHead
+                  title="Live Bedside Patient Monitor"
+                  action={<CTBadge label="WebSocket Stream" variant="pending" />}
+                />
+                <BedsideMonitor patientId={patientId} />
               </div>
             )}
           </main>
         </div>
       </div>
+
+
 
       {/* ── MODAL: Add Observation ── */}
       <Modal isOpen={obsModalOpen} onClose={() => setObsModalOpen(false)} title="Καταχώρηση Observation (Vitals)">

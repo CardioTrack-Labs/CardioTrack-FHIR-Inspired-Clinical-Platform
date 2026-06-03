@@ -14,6 +14,7 @@ type Config struct {
 	Port               string
 	GinMode            string
 	AllowedOrigins     string
+	RabbitMQURL        string
 }
 
 func Load() *Config {
@@ -28,6 +29,7 @@ func Load() *Config {
 		Port:             getEnv("PORT", "8080"),
 		GinMode:          getEnv("GIN_MODE", "debug"),
 		AllowedOrigins:   getEnv("ALLOWED_ORIGINS", "http://localhost:5173"),
+		RabbitMQURL:      getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 	}
 }
 

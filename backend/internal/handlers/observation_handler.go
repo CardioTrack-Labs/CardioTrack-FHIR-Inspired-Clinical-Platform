@@ -9,6 +9,7 @@ import (
 	"github.com/AthanasiosChlr/cardiotrack/internal/dto"
 	"github.com/AthanasiosChlr/cardiotrack/internal/models"
 	"github.com/AthanasiosChlr/cardiotrack/internal/repository"
+	"github.com/AthanasiosChlr/cardiotrack/internal/websocket"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -66,6 +67,11 @@ func (h *ObservationHandler) CreateObservation(c *gin.Context) {
 	if err := h.repo.Create(obs); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create observation"})
 		return
+	}
+
+	// Broadcast vital update to all active telemetry WebSocket clients
+	if hub := websocket.GetTelemetryHub(); hub != nil {
+		hub.BroadcastVital(obs.PatientID, obs.Type, obs.Value, obs.Unit, obs.IsAbnormal)
 	}
 
 	c.JSON(http.StatusCreated, mapObservationToResponse(obs))

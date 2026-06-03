@@ -48,6 +48,8 @@ func Connect(databaseURL string) {
 		&models.Report{},
 		&models.RiskAssessment{},
 		&models.RefreshToken{},
+		&models.ECGRecord{},
+		&models.ECGAnalysis{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to run auto migration: %v", err)
