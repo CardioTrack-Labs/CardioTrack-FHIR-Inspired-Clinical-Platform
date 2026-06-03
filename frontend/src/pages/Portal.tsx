@@ -784,7 +784,9 @@ const PortalMessagesTab: React.FC<PortalMessagesTabProps> = ({ patient, currentU
     if (!currentUser) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/^http:\/\/|^https:\/\//, '') : 'localhost:8080';
+    let host = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/^http:\/\/|^https:\/\//, '') : 'localhost:8080';
+    // Strip trailing /api/v1 since WS endpoints are registered at root level in Go
+    host = host.replace(/\/api\/v1\/?$/, '');
     const wsUrl = `${protocol}//${host}/ws?user_id=${currentUser.id}&role=${currentUser.role}`;
 
     console.log('[WS Patient] Connecting to:', wsUrl);

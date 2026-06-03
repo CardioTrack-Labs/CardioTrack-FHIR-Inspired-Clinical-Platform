@@ -174,9 +174,11 @@ export const BedsideMonitor: React.FC<BedsideMonitorProps> = ({ patientId }) => 
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const envApiUrl = import.meta.env.VITE_API_URL;
-    const host = envApiUrl 
+    let host = envApiUrl 
       ? envApiUrl.replace(/^http:\/\/|^https:\/\//, '') 
       : window.location.host;
+    // Strip trailing /api/v1 since WS endpoints are registered at root level in Go
+    host = host.replace(/\/api\/v1\/?$/, '');
     const ws = new WebSocket(`${protocol}//${host}/ws/live-monitor?patient_id=${patientId}`);
     setStatus('connecting');
 
