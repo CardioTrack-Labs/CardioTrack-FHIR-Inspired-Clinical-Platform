@@ -7,6 +7,7 @@ import (
 
 	"github.com/AthanasiosChlr/cardiotrack/internal/config"
 	"github.com/AthanasiosChlr/cardiotrack/internal/database"
+	"github.com/AthanasiosChlr/cardiotrack/internal/messaging"
 	"github.com/AthanasiosChlr/cardiotrack/internal/middleware"
 	"github.com/AthanasiosChlr/cardiotrack/internal/routes"
 	"github.com/AthanasiosChlr/cardiotrack/internal/seed"
@@ -41,6 +42,14 @@ func main() {
 		websocket.ServeWS(hub, c)
 	})
 
+	// Initialize global Live Telemetry Hub for real-time vitals streaming
+	telemetryHub := websocket.InitTelemetryHub()
+
+	// Live telemetry WebSocket connection upgrading endpoint
+	r.GET("/ws/live-monitor", func(c *gin.Context) {
+		websocket.ServeTelemetryWS(telemetryHub, c)
+	})
+
 	// Initialize Database and run auto migration
 	database.Connect(cfg.DatabaseURL)
 
@@ -52,9 +61,13 @@ func main() {
 	// Register all API routes
 	routes.RegisterRoutes(r)
 
-	// TODO(author): Add RabbitMQ connection + ECG queue publisher (future phase)
-	// TODO(author): Add WebSocket hub initialization for live vitals (future phase)
-	// TODO(author): Add Prometheus metrics endpoint /metrics (future phase)
+	// Initialize RabbitMQ connection + ECG queue publisher
+	messaging.InitRabbitMQ(cfg.RabbitMQURL)
+	defer func() {
+		if mq := messaging.GetRabbitMQ(); mq != nil {
+			mq.Close()
+		}
+	}()
 
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	log.Printf("Server starting on %s (mode: %s)", addr, cfg.GinMode)

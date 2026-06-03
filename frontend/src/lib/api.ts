@@ -224,6 +224,33 @@ class CardioTrackApiClient {
     });
   }
 
+  // ── ECG & FHIR Endpoints ─────────────────────────────────────────
+  async getECGRecords(patientId: number): Promise<any[]> {
+    return await this.request<any[]>(`/patients/${patientId}/ecg`);
+  }
+
+  async getECGAnalysis(patientId: number, recordId: number): Promise<any> {
+    return await this.request<any>(`/patients/${patientId}/ecg/${recordId}`);
+  }
+
+  async uploadECG(patientId: number, file: File, recordedAt?: string): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (recordedAt) {
+      formData.append('recorded_at', recordedAt);
+    }
+    return await this.request<any>(`/patients/${patientId}/ecg`, {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  async importFHIRPatient(fhirId: string): Promise<any> {
+    return await this.request<any>(`/patients/import-fhir?fhir_id=${encodeURIComponent(fhirId)}`, {
+      method: 'POST',
+    });
+  }
+
   // ── Admin Endpoints ─────────────────────────────────────────────
   async getAdminUsers(): Promise<User[]> {
     return await this.request<User[]>('/admin/users');

@@ -19,6 +19,9 @@ func RegisterRoutes(r *gin.Engine) {
 			auth.POST("/logout", authHandler.Logout)
 		}
 
+		// Internal webhook for processing microservices
+		api.POST("/internal/ecg/:id/notify", handlers.NewECGHandler().NotifyComplete)
+
 		protected := api.Group("/")
 		protected.Use(middleware.AuthMiddleware())
 		{
@@ -29,6 +32,7 @@ func RegisterRoutes(r *gin.Engine) {
 			medHandler := handlers.NewMedicationHandler()
 			riskHandler := handlers.NewRiskAssessmentHandler()
 			reportHandler := handlers.NewReportHandler()
+			ecgHandler := handlers.NewECGHandler()
 
 			// Patient (self) profile — accessible to all authenticated roles
 			patients.GET("/me", patientHandler.GetMyProfile)
@@ -38,6 +42,9 @@ func RegisterRoutes(r *gin.Engine) {
 			
 			// Admin/Cardiologist see all, Doctor sees assigned, Patient sees self (handled in handler)
 			patients.GET("", middleware.RequireRole("admin", "cardiologist", "doctor"), middleware.EnsureDoctorPatientAccess(), patientHandler.ListPatients)
+			
+			// Import Patient & ECG from HAPI FHIR Sandbox
+			patients.POST("/import-fhir", middleware.RequireRole("doctor", "cardiologist", "admin"), ecgHandler.ImportFHIRPatientAndECG)
 			
 			// Get specific patient (RBAC handled inside middleware + handler)
 			patients.GET("/:id", middleware.RequirePatientAccess(), patientHandler.GetPatient)
@@ -62,6 +69,11 @@ func RegisterRoutes(r *gin.Engine) {
 
 				patientData.POST("/risk-assessments", middleware.RequireRole("doctor", "cardiologist", "admin"), riskHandler.CreateRiskAssessment)
 				patientData.GET("/risk-assessments", riskHandler.ListRiskAssessments)
+
+				// ECG Waveform & HRV analysis endpoints
+				patientData.POST("/ecg", middleware.RequireRole("doctor", "cardiologist", "admin"), ecgHandler.UploadAndProcess)
+				patientData.GET("/ecg", ecgHandler.ListECGRecords)
+				patientData.GET("/ecg/:record_id", ecgHandler.GetECGAnalysis)
 			}
 			
 			adminGroup := protected.Group("/admin", middleware.RequireRole("admin"))
