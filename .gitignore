@@ -26,6 +26,7 @@ frontend/.next/
 frontend/build/
 frontend/.turbo/
 frontend-prototype/
+frontend/tmp/build-errors.log
 
 # ─── Python ───────────────────────────────────────────────────────────────────
 __pycache__/

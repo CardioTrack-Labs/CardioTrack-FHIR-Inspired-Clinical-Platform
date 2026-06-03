@@ -42,10 +42,13 @@ export interface Observation {
 export interface Condition {
   id: number;
   patientId: number;
-  icd10Code: string;
+  icd10Code?: string;
+  icd10_code?: string;
   description: string;
   status: 'active' | 'resolved' | 'chronic';
   onset_date: string;
+  diagnosed_by?: User;
+  diagnosedBy?: User;
 }
 
 export interface Medication {
@@ -57,6 +60,8 @@ export interface Medication {
   start_date: string;
   end_date?: string;
   status: 'active' | 'discontinued';
+  prescribed_by?: User;
+  prescribedBy?: User;
 }
 
 export interface HEARTScore {

@@ -1103,7 +1103,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                             flexShrink: 0,
                           }}
                         >
-                          {c.icd10Code}
+                          {c.icd10_code || c.icd10Code}
                         </span>
                         <span style={{ flex: 1, color: 'var(--ink-2)', fontWeight: 500 }}>{c.description}</span>
                       </div>
@@ -1260,7 +1260,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                   cols={['ICD-10', 'Περιγραφή', 'Κατάσταση', 'Έναρξη', 'Καταχώρηση']}
                   rows={conditions.map(c => [
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-2)' }}>
-                      {c.icd10Code}
+                      {c.icd10_code || c.icd10Code}
                     </span>,
                     <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{c.description}</span>,
                     <CTBadge label={c.status} variant={c.status} />,
@@ -1271,7 +1271,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                         year: 'numeric',
                       })}
                     </span>,
-                    'Δρ. Νικολάου',
+                    c.diagnosed_by?.name || c.diagnosedBy?.name || 'Δρ. Νικολάου',
                   ])}
                 />
               </div>
@@ -1297,7 +1297,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                       })}
                     </span>,
                     <CTBadge label={m.status} variant={m.status === 'active' ? 'active' : 'chronic'} />,
-                    'Δρ. Νικολάου',
+                    m.prescribed_by?.name || m.prescribedBy?.name || 'Δρ. Νικολάου',
                   ])}
                 />
               </div>
