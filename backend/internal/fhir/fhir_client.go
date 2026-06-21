@@ -447,3 +447,68 @@ func (c *FHIRClient) FetchObservations(patientID string) ([]FHIRObservation, err
 	}
 	return obsList, nil
 }
+
+type FHIRResourceHeader struct {
+	ResourceType string `json:"resourceType"`
+}
+
+type FHIRGenericBundle struct {
+	Entry []struct {
+		Resource json.RawMessage `json:"resource"`
+	} `json:"entry"`
+}
+
+// ParseFHIRBundle parses a complete HL7 FHIR transaction/searchset Bundle JSON into typed structures.
+func (c *FHIRClient) ParseFHIRBundle(bundleJSON []byte) (*FHIRPatient, []FHIRCondition, []FHIRMedicationRequest, []FHIRObservation, error) {
+	var bundle FHIRGenericBundle
+	if err := json.Unmarshal(bundleJSON, &bundle); err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to parse generic bundle: %w", err)
+	}
+
+	var patient *FHIRPatient
+	var conditions []FHIRCondition
+	var medications []FHIRMedicationRequest
+	var observations []FHIRObservation
+
+	for _, entry := range bundle.Entry {
+		var header FHIRResourceHeader
+		if err := json.Unmarshal(entry.Resource, &header); err != nil {
+			continue
+		}
+
+		switch header.ResourceType {
+		case "Patient":
+			var pat FHIRPatient
+			if err := json.Unmarshal(entry.Resource, &pat); err == nil {
+				patient = &pat
+			}
+		case "Condition":
+			var cond FHIRCondition
+			if err := json.Unmarshal(entry.Resource, &cond); err == nil {
+				conditions = append(conditions, cond)
+			}
+		case "MedicationRequest":
+			var med FHIRMedicationRequest
+			if err := json.Unmarshal(entry.Resource, &med); err == nil {
+				medications = append(medications, med)
+			}
+		case "Observation":
+			var obs FHIRObservation
+			if err := json.Unmarshal(entry.Resource, &obs); err == nil {
+				// Avoid adding ECG observations to the standard list
+				isECG := false
+				for _, coding := range obs.Code.Coding {
+					if coding.Code == "59774-0" {
+						isECG = true
+						break
+					}
+				}
+				if !isECG {
+					observations = append(observations, obs)
+				}
+			}
+		}
+	}
+
+	return patient, conditions, medications, observations, nil
+}

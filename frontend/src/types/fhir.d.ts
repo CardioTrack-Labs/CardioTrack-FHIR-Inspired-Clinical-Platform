@@ -18,6 +18,15 @@ export interface Patient {
   assigned_doctor?: User;
   createdAt?: string;
   updatedAt?: string;
+  primary_condition?: string;
+  heart_rate?: number;
+  systolic_bp?: number;
+  diastolic_bp?: number;
+  spo2?: number;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  heart_score?: number;
+  heart_category?: string;
 }
 
 export type ObservationType =
@@ -37,6 +46,7 @@ export interface Observation {
   recorded_at: string;
   is_abnormal: boolean;
   notes?: string;
+  recorded_by?: User;
 }
 
 export interface Condition {

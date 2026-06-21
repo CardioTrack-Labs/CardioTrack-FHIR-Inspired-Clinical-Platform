@@ -1,0 +1,454 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "131288089",
+        "birthDate": "1980-07-09",
+        "gender": "female",
+        "name": [
+          {
+            "family": "Patel",
+            "given": [
+              "Aisha"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-ap-1",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "K50.90",
+              "display": "Crohn's disease of ileum and colon"
+            }
+          ]
+        },
+        "onsetDateTime": "2015-03-20",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-ap-2",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "D50.9",
+              "display": "Iron deficiency anemia"
+            }
+          ]
+        },
+        "onsetDateTime": "2025-01-15",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-ap-3",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "D18.01",
+              "display": "Hepatic hemangioma"
+            }
+          ]
+        },
+        "onsetDateTime": "2025-04-10",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-ap-4",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "K60.3",
+              "display": "Perianal fistula"
+            }
+          ]
+        },
+        "onsetDateTime": "2025-06-01",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-ap-1",
+        "status": "active",
+        "intent": "order",
+        "subject": { "reference": "Patient/131288089" },
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "19424",
+              "display": "Infliximab 400mg IV"
+            }
+          ],
+          "text": "Infliximab 400mg IV"
+        },
+        "authoredOn": "2023-01-10T08:00:00Z",
+        "dosageInstruction": [
+          {
+            "text": "400mg IV every 8 weeks",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 56.0,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-ap-2",
+        "status": "active",
+        "intent": "order",
+        "subject": { "reference": "Patient/131288089" },
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "1256",
+              "display": "Azathioprine 150mg"
+            }
+          ],
+          "text": "Azathioprine 150mg"
+        },
+        "authoredOn": "2023-01-10T08:00:00Z",
+        "dosageInstruction": [
+          {
+            "text": "150mg PO daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-ap-3",
+        "status": "active",
+        "intent": "order",
+        "subject": { "reference": "Patient/131288089" },
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "310283",
+              "display": "Ferrous Sulfate 325mg"
+            }
+          ],
+          "text": "Ferrous Sulfate 325mg"
+        },
+        "authoredOn": "2025-01-15T08:00:00Z",
+        "dosageInstruction": [
+          {
+            "text": "325mg PO TID with vitamin C",
+            "timing": {
+              "repeat": {
+                "frequency": 3,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-ap-4",
+        "status": "completed",
+        "intent": "order",
+        "subject": { "reference": "Patient/131288089" },
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "83367",
+              "display": "Prednisone 40mg taper"
+            }
+          ],
+          "text": "Prednisone 40mg taper"
+        },
+        "authoredOn": "2025-08-01T08:00:00Z",
+        "dosageInstruction": [
+          {
+            "text": "40mg PO daily, taper by 10mg weekly",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-ap-5",
+        "status": "active",
+        "intent": "order",
+        "subject": { "reference": "Patient/131288089" },
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "6922",
+              "display": "Metronidazole 500mg"
+            }
+          ],
+          "text": "Metronidazole 500mg"
+        },
+        "authoredOn": "2025-06-01T08:00:00Z",
+        "dosageInstruction": [
+          {
+            "text": "500mg PO TID",
+            "timing": {
+              "repeat": {
+                "frequency": 3,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-ap-hr-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 76.0,
+          "unit": "bpm"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-ap-sys-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 116.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-ap-dia-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 75.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-ap-spo-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2708-6",
+              "display": "Oxygen saturation"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 99.0,
+          "unit": "%"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-ap-sys-2",
+        "status": "final",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-02T10:00:00Z",
+        "valueQuantity": {
+          "value": 118.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-ap-dia-2",
+        "status": "final",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-02T10:00:00Z",
+        "valueQuantity": {
+          "value": 78.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-ap-sys-3",
+        "status": "final",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-01T10:00:00Z",
+        "valueQuantity": {
+          "value": 115.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-ap-dia-3",
+        "status": "final",
+        "subject": { "reference": "Patient/131288089" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-01T10:00:00Z",
+        "valueQuantity": {
+          "value": 74.0,
+          "unit": "mmHg"
+        }
+      }
+    }
+  ]
+}

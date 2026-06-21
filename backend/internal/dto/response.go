@@ -31,6 +31,13 @@ type PatientResponse struct {
 	EmergencyContactName  string        `json:"emergency_contact_name,omitempty"`
 	EmergencyContactPhone string        `json:"emergency_contact_phone,omitempty"`
 	AssignedDoctor        *UserResponse `json:"assigned_doctor,omitempty"`
+	PrimaryCondition      *string       `json:"primary_condition,omitempty"`
+	HeartRate             *float64      `json:"heart_rate,omitempty"`
+	SystolicBP            *float64      `json:"systolic_bp,omitempty"`
+	DiastolicBP           *float64      `json:"diastolic_bp,omitempty"`
+	SpO2                  *float64      `json:"spo2,omitempty"`
+	HeartScore            *int          `json:"heart_score,omitempty"`
+	HeartCategory         *string       `json:"heart_category,omitempty"`
 	CreatedAt             time.Time     `json:"created_at"`
 	UpdatedAt             time.Time     `json:"updated_at"`
 }

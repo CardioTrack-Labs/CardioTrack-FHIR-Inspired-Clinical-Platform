@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AthanasiosChlr/cardiotrack/internal/database"
 	"github.com/AthanasiosChlr/cardiotrack/internal/dto"
 	"github.com/AthanasiosChlr/cardiotrack/internal/models"
 	"github.com/AthanasiosChlr/cardiotrack/internal/repository"
@@ -201,6 +202,40 @@ func mapPatientToResponse(p *models.Patient) dto.PatientResponse {
 			Role:      p.AssignedDoctor.Role,
 			CreatedAt: p.AssignedDoctor.CreatedAt,
 		}
+	}
+
+	// Query latest active condition
+	var cond models.Condition
+	if err := database.DB.Where("patient_id = ? AND status = ?", p.ID, "active").Order("onset_date desc").First(&cond).Error; err == nil {
+		resp.PrimaryCondition = &cond.Description
+	}
+
+	// Query latest vital observations
+	var hr float64
+	if err := database.DB.Table("observations").Where("patient_id = ? AND type = ?", p.ID, "heart_rate").Order("recorded_at desc").Select("value").Limit(1).Scan(&hr).Error; err == nil && hr > 0 {
+		resp.HeartRate = &hr
+	}
+
+	var sys float64
+	if err := database.DB.Table("observations").Where("patient_id = ? AND type = ?", p.ID, "systolic_bp").Order("recorded_at desc").Select("value").Limit(1).Scan(&sys).Error; err == nil && sys > 0 {
+		resp.SystolicBP = &sys
+	}
+
+	var dia float64
+	if err := database.DB.Table("observations").Where("patient_id = ? AND type = ?", p.ID, "diastolic_bp").Order("recorded_at desc").Select("value").Limit(1).Scan(&dia).Error; err == nil && dia > 0 {
+		resp.DiastolicBP = &dia
+	}
+
+	var spo2 float64
+	if err := database.DB.Table("observations").Where("patient_id = ? AND type = ?", p.ID, "spo2").Order("recorded_at desc").Select("value").Limit(1).Scan(&spo2).Error; err == nil && spo2 > 0 {
+		resp.SpO2 = &spo2
+	}
+
+	// Query latest HEART risk assessment
+	var ra models.RiskAssessment
+	if err := database.DB.Where("patient_id = ? AND score_type = ?", p.ID, "HEART").Order("calculated_at desc").First(&ra).Error; err == nil {
+		resp.HeartScore = &ra.ScoreValue
+		resp.HeartCategory = &ra.RiskCategory
 	}
 
 	return resp

@@ -944,7 +944,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                 year: 'numeric',
               })}
             />
-            <CTInfoRow label="Φύλο" value={patient.gender === 'Male' ? 'Άνδρας' : 'Γυναίκα'} />
+            <CTInfoRow label="Φύλο" value={patient.gender?.toLowerCase() === 'male' ? 'Άνδρας' : patient.gender?.toLowerCase() === 'female' ? 'Γυναίκα' : 'Άλλο'} />
             <CTInfoRow label="Ομάδα" value={patient.blood_type || 'O+'} mono />
           </div>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
@@ -993,10 +993,14 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
             >
               Επείγουσα επαφή
             </div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>Μαρία Παπαδοπούλου</div>
-            <div style={{ fontSize: 12.5, color: 'var(--ink-3)', fontFamily: 'var(--mono)' }}>
-              +30 6912 345 678
+            <div style={{ fontSize: 13, fontWeight: 500, color: patient.emergency_contact_name ? 'var(--ink-2)' : 'var(--ink-3)' }}>
+              {patient.emergency_contact_name || 'Δεν έχει καταχωρηθεί'}
             </div>
+            {patient.emergency_contact_phone && (
+              <div style={{ fontSize: 12.5, color: 'var(--ink-3)', fontFamily: 'var(--mono)' }}>
+                {patient.emergency_contact_phone}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1244,7 +1248,7 @@ export const Profile: React.FC<ProfileProps> = ({ patientId, navigate, currentUs
                     ) : (
                       <CTBadge label="Normal" variant="normal" />
                     ),
-                    'Δρ. Νικολάου',
+                    o.recorded_by?.name || 'Δρ. Νικολάου',
                   ])}
                 />
               </div>

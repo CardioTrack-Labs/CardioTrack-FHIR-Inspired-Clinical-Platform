@@ -1,0 +1,134 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "131288999",
+        "birthDate": "1978-11-14",
+        "gender": "male",
+        "name": [
+          {
+            "family": "Nikolaou",
+            "given": [
+              "Panagiotis"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-pn-1",
+        "subject": { "reference": "Patient/131288999" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "I10",
+              "display": "Essential hypertension"
+            }
+          ]
+        },
+        "onsetDateTime": "2022-03-10",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-pn-hr-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288999" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 78.0,
+          "unit": "bpm"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-pn-sys-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288999" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 135.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-pn-dia-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288999" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 82.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-pn-spo-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288999" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2708-6",
+              "display": "Oxygen saturation"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 98.0,
+          "unit": "%"
+        }
+      }
+    }
+  ]
+}
