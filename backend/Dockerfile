@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:alpine AS builder
 
 WORKDIR /app
 
@@ -6,9 +6,9 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source and build
+# Copy source and build (CGO_ENABLED=0 για static binary σε Alpine)
 COPY . .
-RUN go build -o server ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o server ./cmd/server
 
 # ─── Runtime image ────────────────────────────────────────────────────────────
 FROM alpine:3.19
