@@ -13,6 +13,7 @@ import (
 	"github.com/AthanasiosChlr/cardiotrack/internal/seed"
 	"github.com/AthanasiosChlr/cardiotrack/internal/websocket"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -36,6 +37,9 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+
+	// Prometheus metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// WebSocket connection upgrading endpoint
 	r.GET("/ws", func(c *gin.Context) {
