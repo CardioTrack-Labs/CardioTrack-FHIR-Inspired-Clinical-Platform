@@ -1395,7 +1395,7 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
           bp: p.systolic_bp ? { sys: p.systolic_bp, dia: p.diastolic_bp || 80 } : { sys: 120, dia: 80 }, 
           hr: p.heart_rate || 72,
           heart: { score: heartScore, cat: heartCat },
-          status: hasAlert ? 'active' : 'stable', 
+          status: heartCat === 'high' ? 'critical' : (heartCat === 'moderate' || hasAlert ? 'active' : 'stable'), 
           alerts: hasAlert ? 1 : 0,
         };
       });
