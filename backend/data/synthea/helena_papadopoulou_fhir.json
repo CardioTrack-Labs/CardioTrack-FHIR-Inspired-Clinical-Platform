@@ -1,0 +1,254 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "131288222",
+        "birthDate": "1956-08-24",
+        "gender": "female",
+        "name": [
+          {
+            "family": "Papadopoulou",
+            "given": [
+              "Helena"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-hp-1",
+        "subject": { "reference": "Patient/131288222" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "I50.9",
+              "display": "Heart failure, unspecified"
+            }
+          ]
+        },
+        "onsetDateTime": "2022-11-10",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-hp-2",
+        "subject": { "reference": "Patient/131288222" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "M19.90",
+              "display": "Unspecified osteoarthritis, unspecified site"
+            }
+          ]
+        },
+        "onsetDateTime": "2015-03-05",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-hp-1",
+        "status": "active",
+        "intent": "order",
+        "subject": { "reference": "Patient/131288222" },
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "855332",
+              "display": "Furosemide 40mg"
+            }
+          ],
+          "text": "Furosemide 40mg"
+        },
+        "authoredOn": "2022-11-12T08:00:00Z",
+        "dosageInstruction": [
+          {
+            "text": "40mg PO daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-hp-2",
+        "status": "active",
+        "intent": "order",
+        "subject": { "reference": "Patient/131288222" },
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "830582",
+              "display": "Lisinopril 10mg"
+            }
+          ],
+          "text": "Lisinopril 10mg"
+        },
+        "authoredOn": "2022-11-12T08:00:00Z",
+        "dosageInstruction": [
+          {
+            "text": "10mg PO daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-hp-3",
+        "status": "active",
+        "intent": "order",
+        "subject": { "reference": "Patient/131288222" },
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "161",
+              "display": "Paracetamol 1000mg"
+            }
+          ],
+          "text": "Paracetamol 1000mg"
+        },
+        "authoredOn": "2015-03-06T08:00:00Z",
+        "dosageInstruction": [
+          {
+            "text": "1000mg PO daily as needed",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hp-hr-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288222" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 82.0,
+          "unit": "bpm"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hp-sys-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288222" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 128.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hp-dia-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288222" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 76.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hp-spo-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288222" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2708-6",
+              "display": "Oxygen saturation"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 97.0,
+          "unit": "%"
+        }
+      }
+    }
+  ]
+}

@@ -1360,22 +1360,28 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
         const nameParts = name.split(' ');
         const initials = nameParts.map(n => n[0]).join('');
 
+        const hasAlert = (p.systolic_bp && p.systolic_bp > 140) || (p.heart_rate && (p.heart_rate > 100 || p.heart_rate < 60)) || (p.spo2 && p.spo2 < 95);
+
+        // Use real HEART score from API if available
+        const heartScore = p.heart_score ?? 0;
+        const heartCat = p.heart_category ?? (hasAlert ? 'moderate' : 'low');
+
         return {
           id: p.medical_record_number || `MRN-${p.id}`,
           dbId: p.id,
           name: name,
           initials,
           age,
-          gender: p.gender === 'Male' ? 'Άνδρας' : p.gender === 'Female' ? 'Γυναίκα' : 'Άλλο',
+          gender: p.gender?.toLowerCase() === 'male' ? 'Άνδρας' : p.gender?.toLowerCase() === 'female' ? 'Γυναίκα' : 'Άλλο',
           blood: p.blood_type || 'O+',
-          primary: { code: 'I10', desc: 'Essential (primary) hypertension' },
+          primary: { code: 'I10', desc: p.primary_condition || 'Essential (primary) hypertension' },
           lastObs: 'Σήμερα', 
           daysAgo: 0,
-          bp: { sys: 120, dia: 80 }, 
-          hr: 72,
-          heart: { score: 4, cat: 'moderate' },
-          status: 'active', 
-          alerts: 0,
+          bp: p.systolic_bp ? { sys: p.systolic_bp, dia: p.diastolic_bp || 80 } : { sys: 120, dia: 80 }, 
+          hr: p.heart_rate || 72,
+          heart: { score: heartScore, cat: heartCat },
+          status: hasAlert ? 'active' : 'stable', 
+          alerts: hasAlert ? 1 : 0,
         };
       });
       setPatients(mapped);

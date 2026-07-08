@@ -18,6 +18,15 @@ export interface Patient {
   assigned_doctor?: User;
   createdAt?: string;
   updatedAt?: string;
+  primary_condition?: string;
+  heart_rate?: number;
+  systolic_bp?: number;
+  diastolic_bp?: number;
+  spo2?: number;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  heart_score?: number;
+  heart_category?: string;
 }
 
 export type ObservationType =
@@ -37,15 +46,19 @@ export interface Observation {
   recorded_at: string;
   is_abnormal: boolean;
   notes?: string;
+  recorded_by?: User;
 }
 
 export interface Condition {
   id: number;
   patientId: number;
-  icd10Code: string;
+  icd10Code?: string;
+  icd10_code?: string;
   description: string;
   status: 'active' | 'resolved' | 'chronic';
   onset_date: string;
+  diagnosed_by?: User;
+  diagnosedBy?: User;
 }
 
 export interface Medication {
@@ -57,6 +70,8 @@ export interface Medication {
   start_date: string;
   end_date?: string;
   status: 'active' | 'discontinued';
+  prescribed_by?: User;
+  prescribedBy?: User;
 }
 
 export interface HEARTScore {

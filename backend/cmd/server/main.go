@@ -57,6 +57,8 @@ func main() {
 	seed.Run()
 	// Patch rich clinical demo data (observations + medications with correct types)
 	seed.PatchClinicalData()
+	// Seed Synthea-generated FHIR patient bundles cascadingly
+	seed.SeedSyntheaPatients()
 
 	// Register all API routes
 	routes.RegisterRoutes(r)

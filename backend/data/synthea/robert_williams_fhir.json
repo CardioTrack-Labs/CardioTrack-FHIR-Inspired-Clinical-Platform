@@ -1,0 +1,350 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "131288052",
+        "birthDate": "1954-03-17",
+        "gender": "male",
+        "name": [
+          {
+            "family": "Williams",
+            "given": [
+              "Robert"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-rw-1",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "I63.9",
+              "display": "Acute ischemic stroke - left MCA territory"
+            }
+          ]
+        },
+        "onsetDateTime": "2025-10-01",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-rw-2",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "I48.91",
+              "display": "Atrial fibrillation"
+            }
+          ]
+        },
+        "onsetDateTime": "2023-05-15",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-rw-3",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "I67.2",
+              "display": "Carotid artery stenosis, right - 80%"
+            }
+          ]
+        },
+        "onsetDateTime": "2025-10-02",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-rw-4",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "F01.50",
+              "display": "Vascular dementia"
+            }
+          ]
+        },
+        "onsetDateTime": "2024-06-01",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-rw-5",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10",
+              "code": "I10",
+              "display": "Essential hypertension"
+            }
+          ]
+        },
+        "onsetDateTime": "2015-01-10",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "med-rw-1",
+        "status": "active",
+        "intent": "order",
+        "subject": { "reference": "Patient/131288052" },
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "311354",
+              "display": "Memantine 10mg"
+            }
+          ],
+          "text": "Memantine 10mg"
+        },
+        "authoredOn": "2024-09-01T08:00:00Z",
+        "dosageInstruction": [
+          {
+            "text": "10mg PO BID",
+            "timing": {
+              "repeat": {
+                "frequency": 2,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-rw-hr-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 85.0,
+          "unit": "bpm"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-rw-sys-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 148.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-rw-dia-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 92.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-rw-spo-1",
+        "status": "final",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2708-6",
+              "display": "Oxygen saturation"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-03T10:00:00Z",
+        "valueQuantity": {
+          "value": 96.0,
+          "unit": "%"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-rw-sys-2",
+        "status": "final",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-02T10:00:00Z",
+        "valueQuantity": {
+          "value": 152.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-rw-dia-2",
+        "status": "final",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-02T10:00:00Z",
+        "valueQuantity": {
+          "value": 95.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-rw-sys-3",
+        "status": "final",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-01T10:00:00Z",
+        "valueQuantity": {
+          "value": 145.0,
+          "unit": "mmHg"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-rw-dia-3",
+        "status": "final",
+        "subject": { "reference": "Patient/131288052" },
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ]
+        },
+        "effectiveDateTime": "2026-06-01T10:00:00Z",
+        "valueQuantity": {
+          "value": 90.0,
+          "unit": "mmHg"
+        }
+      }
+    }
+  ]
+}

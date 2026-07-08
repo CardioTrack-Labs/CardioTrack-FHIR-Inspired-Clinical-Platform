@@ -20,18 +20,24 @@ import (
 )
 
 type ECGHandler struct {
-	ecgRepo     *repository.ECGRepository
-	patientRepo *repository.PatientRepository
-	userRepo    *repository.UserRepository
-	fhirClient  *fhir.FHIRClient
+	ecgRepo         *repository.ECGRepository
+	patientRepo     *repository.PatientRepository
+	userRepo        *repository.UserRepository
+	conditionRepo   *repository.ConditionRepository
+	medicationRepo  *repository.MedicationRepository
+	observationRepo *repository.ObservationRepository
+	fhirClient      *fhir.FHIRClient
 }
 
 func NewECGHandler() *ECGHandler {
 	return &ECGHandler{
-		ecgRepo:     repository.NewECGRepository(),
-		patientRepo: repository.NewPatientRepository(),
-		userRepo:    repository.NewUserRepository(),
-		fhirClient:  fhir.NewFHIRClient(),
+		ecgRepo:         repository.NewECGRepository(),
+		patientRepo:     repository.NewPatientRepository(),
+		userRepo:        repository.NewUserRepository(),
+		conditionRepo:   repository.NewConditionRepository(),
+		medicationRepo:  repository.NewMedicationRepository(),
+		observationRepo: repository.NewObservationRepository(),
+		fhirClient:      fhir.NewFHIRClient(),
 	}
 }
 
@@ -223,6 +229,158 @@ func (h *ECGHandler) ImportFHIRPatientAndECG(c *gin.Context) {
 		}
 	}
 
+	// Resolve clinician ID
+	userIDVal, exists := c.Get("user_id")
+	var userID uint = 1
+	if exists {
+		userID = userIDVal.(uint)
+	}
+
+	// ── Ingest Clinical Conditions (Diagnoses) from FHIR Sandbox ───────
+	fhirConds, err := h.fhirClient.FetchConditions(fhirPat.ID)
+	if err == nil {
+		for _, fhirCond := range fhirConds {
+			onset := time.Now()
+			if fhirCond.OnsetDateTime != "" {
+				if t, err := time.Parse("2006-01-02", fhirCond.OnsetDateTime[:10]); err == nil {
+					onset = t
+				}
+			}
+			icd10 := "U07.1"
+			desc := "Unknown condition"
+			if len(fhirCond.Code.Coding) > 0 {
+				if fhirCond.Code.Coding[0].Code != "" {
+					icd10 = fhirCond.Code.Coding[0].Code
+				}
+				if fhirCond.Code.Coding[0].Display != "" {
+					desc = fhirCond.Code.Coding[0].Display
+				}
+			}
+			if fhirCond.Code.Text != "" {
+				desc = fhirCond.Code.Text
+			}
+			status := "active"
+			if len(fhirCond.ClinicalStatus.Coding) > 0 && fhirCond.ClinicalStatus.Coding[0].Code != "" {
+				status = fhirCond.ClinicalStatus.Coding[0].Code
+			}
+
+			cond := &models.Condition{
+				PatientID:     patient.ID,
+				ICD10Code:     icd10,
+				Description:   desc,
+				OnsetDate:     onset,
+				Status:        status,
+				DiagnosedByID: userID,
+			}
+			_ = h.conditionRepo.Create(cond)
+		}
+	}
+
+	// ── Ingest Medication Requests (Prescriptions) from FHIR Sandbox ───
+	fhirMeds, err := h.fhirClient.FetchMedicationRequests(fhirPat.ID)
+	if err == nil {
+		for _, fhirMed := range fhirMeds {
+			name := "Unknown Medication"
+			if len(fhirMed.MedicationCodeableConcept.Coding) > 0 && fhirMed.MedicationCodeableConcept.Coding[0].Display != "" {
+				name = fhirMed.MedicationCodeableConcept.Coding[0].Display
+			} else if fhirMed.MedicationCodeableConcept.Text != "" {
+				name = fhirMed.MedicationCodeableConcept.Text
+			}
+			dosage := "As directed"
+			freq := "Once daily"
+			if len(fhirMed.DosageInstruction) > 0 {
+				if fhirMed.DosageInstruction[0].Text != "" {
+					dosage = fhirMed.DosageInstruction[0].Text
+				}
+				if fhirMed.DosageInstruction[0].Timing.Repeat.Frequency > 0 {
+					freq = fmt.Sprintf("%d times per %.1f %s",
+						fhirMed.DosageInstruction[0].Timing.Repeat.Frequency,
+						fhirMed.DosageInstruction[0].Timing.Repeat.Period,
+						fhirMed.DosageInstruction[0].Timing.Repeat.PeriodUnit,
+					)
+				}
+			}
+			start := time.Now()
+			if fhirMed.AuthoredOn != "" {
+				if t, err := time.Parse(time.RFC3339, fhirMed.AuthoredOn); err == nil {
+					start = t
+				} else if t, err := time.Parse("2006-01-02", fhirMed.AuthoredOn[:10]); err == nil {
+					start = t
+				}
+			}
+			med := &models.Medication{
+				PatientID:      patient.ID,
+				Name:           name,
+				Dosage:         dosage,
+				Frequency:      freq,
+				StartDate:      start,
+				PrescribedByID: userID,
+				Status:         fhirMed.Status,
+			}
+			_ = h.medicationRepo.Create(med)
+		}
+	}
+
+	// ── Ingest Other Clinical Observations (Vitals & Labs) ────────────
+	fhirObsList, err := h.fhirClient.FetchObservations(fhirPat.ID)
+	if err == nil {
+		for _, fhirObs := range fhirObsList {
+			val := 0.0
+			unit := ""
+			if fhirObs.ValueQuantity != nil {
+				val = fhirObs.ValueQuantity.Value
+				unit = fhirObs.ValueQuantity.Unit
+			}
+			obsType := "vital"
+			notes := ""
+			if len(fhirObs.Code.Coding) > 0 {
+				if fhirObs.Code.Coding[0].Display != "" {
+					obsType = fhirObs.Code.Coding[0].Display
+					notes = fmt.Sprintf("Code: %s (%s)", fhirObs.Code.Coding[0].Code, fhirObs.Code.Coding[0].System)
+				} else if fhirObs.Code.Coding[0].Code != "" {
+					obsType = fhirObs.Code.Coding[0].Code
+				}
+			}
+			recorded := time.Now()
+			if fhirObs.EffectiveDateTime != "" {
+				if t, err := time.Parse(time.RFC3339, fhirObs.EffectiveDateTime); err == nil {
+					recorded = t
+				} else if t, err := time.Parse("2006-01-02", fhirObs.EffectiveDateTime[:10]); err == nil {
+					recorded = t
+				}
+			}
+			mappedType := strings.ToLower(obsType)
+			if strings.Contains(mappedType, "heart rate") || strings.Contains(mappedType, "pulse rate") {
+				mappedType = "heart_rate"
+			} else if strings.Contains(mappedType, "systolic") {
+				mappedType = "systolic_bp"
+			} else if strings.Contains(mappedType, "diastolic") {
+				mappedType = "diastolic_bp"
+			} else if strings.Contains(mappedType, "oxygen saturation") || strings.Contains(mappedType, "spo2") {
+				mappedType = "spo2"
+			} else if strings.Contains(mappedType, "respiratory rate") || strings.Contains(mappedType, "resp rate") {
+				mappedType = "resp_rate"
+			} else if strings.Contains(mappedType, "body temperature") || strings.Contains(mappedType, "temp") {
+				mappedType = "temperature"
+			} else {
+				if len(mappedType) > 50 {
+					mappedType = mappedType[:50]
+				}
+			}
+			obs := &models.Observation{
+				PatientID:    patient.ID,
+				Type:         mappedType,
+				Value:        val,
+				Unit:         unit,
+				RecordedByID: userID,
+				RecordedAt:   recorded,
+				IsAbnormal:   false,
+				Notes:        notes,
+			}
+			_ = h.observationRepo.Create(obs)
+		}
+	}
+
 	// 2. Fetch latest ECG Observation with SampledData
 	obs, samples, freq, err := h.fhirClient.FetchECGObservation(fhirPat.ID)
 	if err != nil {
@@ -253,12 +411,7 @@ func (h *ECGHandler) ImportFHIRPatientAndECG(c *gin.Context) {
 		return
 	}
 
-	// Resolve clinician ID
-	userIDVal, exists := c.Get("user_id")
-	var userID uint = 1
-	if exists {
-		userID = userIDVal.(uint)
-	}
+	// Clinician ID resolved earlier
 
 	recordedAt := time.Now()
 	if obs.EffectiveDateTime != "" {
