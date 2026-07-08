@@ -58,6 +58,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	var patientID uint
 	// For patient role, automatically create a corresponding patient profile
 	if user.Role == "patient" {
 		patientRepo := repository.NewPatientRepository()
@@ -71,9 +72,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create patient profile"})
 			return
 		}
+		patientID = patient.ID
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
+	c.JSON(http.StatusCreated, gin.H{
+		"message":    "User registered successfully",
+		"user_id":    user.ID,
+		"patient_id": patientID,
+	})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {

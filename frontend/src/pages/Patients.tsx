@@ -910,9 +910,10 @@ interface ToolbarProps {
   sort: string;
   onSort: (v: string) => void;
   onImportFHIRClick: () => void;
+  onAddPatientClick: () => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ search, onSearch, filter, onFilter, sort, onSort, onImportFHIRClick }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ search, onSearch, filter, onFilter, sort, onSort, onImportFHIRClick, onAddPatientClick }) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
       <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 320 }} className="max-md:!max-w-none max-md:!w-full max-md:!flex-none">
@@ -992,7 +993,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ search, onSearch, filter, onFilter, s
         ))}
       </select>
       <CTBtn label="Εισαγωγή από FHIR" variant="secondary" onClick={onImportFHIRClick} />
-      <CTBtn label="+ Νέος Ασθενής" />
+      <CTBtn label="+ Νέος Ασθενής" onClick={onAddPatientClick} />
     </div>
   );
 };
@@ -1338,6 +1339,20 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Add Patient states
+  const [addPatientModalOpen, setAddPatientModalOpen] = useState(false);
+  const [newPatientEmail, setNewPatientEmail] = useState('');
+  const [newPatientPassword, setNewPatientPassword] = useState('');
+  const [newPatientName, setNewPatientName] = useState('');
+  const [newPatientDOB, setNewPatientDOB] = useState('');
+  const [newPatientGender, setNewPatientGender] = useState('male');
+  const [newPatientMRN, setNewPatientMRN] = useState('');
+  const [newPatientBloodType, setNewPatientBloodType] = useState('O+');
+  const [newPatientEmergencyName, setNewPatientEmergencyName] = useState('');
+  const [newPatientEmergencyPhone, setNewPatientEmergencyPhone] = useState('');
+  const [isAddingPatient, setIsAddingPatient] = useState(false);
+  const [addPatientStatus, setAddPatientStatus] = useState<{ success: boolean; message: string } | null>(null);
+
   const loadPatients = async () => {
     try {
       setLoading(true);
@@ -1416,6 +1431,68 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
       });
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  const handleAddPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPatientEmail.trim() || !newPatientPassword.trim() || !newPatientName.trim() || !newPatientDOB.trim() || !newPatientMRN.trim()) {
+      setAddPatientStatus({ success: false, message: 'Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία.' });
+      return;
+    }
+
+    setIsAddingPatient(true);
+    setAddPatientStatus(null);
+
+    try {
+      // 1. Register User (creates patient record automatically in backend)
+      const regRes = await ctApi.register(newPatientEmail.trim(), newPatientPassword.trim(), newPatientName.trim());
+      
+      if (!regRes.patient_id) {
+        throw new Error('Η εγγραφή χρήστη نجحت, αλλά δεν δημιουργήθηκε προφίλ ασθενή.');
+      }
+
+      // 2. Update Patient details
+      const updateData: any = {
+        date_of_birth: newPatientDOB,
+        gender: newPatientGender,
+        medical_record_number: newPatientMRN.trim(),
+        blood_type: newPatientBloodType,
+        emergency_contact_name: newPatientEmergencyName.trim(),
+        emergency_contact_phone: newPatientEmergencyPhone.trim(),
+        assigned_doctor_id: currentUser ? currentUser.id : null,
+      };
+
+      await ctApi.updatePatient(regRes.patient_id, updateData);
+
+      setAddPatientStatus({ success: true, message: 'Ο ασθενής προστέθηκε με επιτυχία!' });
+      
+      // Reset form fields
+      setNewPatientEmail('');
+      setNewPatientPassword('');
+      setNewPatientName('');
+      setNewPatientDOB('');
+      setNewPatientGender('male');
+      setNewPatientMRN('');
+      setNewPatientBloodType('O+');
+      setNewPatientEmergencyName('');
+      setNewPatientEmergencyPhone('');
+
+      // Reload patient list
+      await loadPatients();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setAddPatientModalOpen(false);
+        setAddPatientStatus(null);
+      }, 1500);
+    } catch (err: any) {
+      setAddPatientStatus({
+        success: false,
+        message: err.message || 'Αποτυχία προσθήκης ασθενή.'
+      });
+    } finally {
+      setIsAddingPatient(false);
     }
   };
 
@@ -1539,6 +1616,7 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
                 sort={sort}
                 onSort={setSort}
                 onImportFHIRClick={() => { setFhirModalOpen(true); setImportStatus(null); }}
+                onAddPatientClick={() => { setAddPatientModalOpen(true); setAddPatientStatus(null); }}
               />
               <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 10 }}>
                 {filtered.length === patients.length
@@ -1624,6 +1702,264 @@ export const Patients: React.FC<PatientsProps> = ({ navigate, currentUser }) => 
               }}
             >
               {isImporting ? 'Εισαγωγή…' : 'Εισαγωγή από FHIR'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── MODAL: Add Patient ── */}
+      <Modal isOpen={addPatientModalOpen} onClose={() => setAddPatientModalOpen(false)} title="Προσθήκη Νέου Ασθενή">
+        <p style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16 }}>
+          Εισαγάγετε τα στοιχεία του νέου ασθενή. Θα δημιουργηθεί αυτόματα λογαριασμός χρήστη και το κλινικό του προφίλ.
+        </p>
+        <form onSubmit={handleAddPatient}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+            <div>
+              <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+                Όνοματεπώνυμο *
+              </label>
+              <input
+                required
+                value={newPatientName}
+                onChange={e => setNewPatientName(e.target.value)}
+                placeholder="π.χ. Ιωάννης Παπαδόπουλος"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13.5,
+                  border: '1px solid var(--border-s)',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--bg)',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+                disabled={isAddingPatient}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+                Διεύθυνση Email *
+              </label>
+              <input
+                required
+                type="email"
+                value={newPatientEmail}
+                onChange={e => setNewPatientEmail(e.target.value)}
+                placeholder="patient@example.com"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13.5,
+                  border: '1px solid var(--border-s)',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--bg)',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+                disabled={isAddingPatient}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+                Κωδικός Πρόσβασης *
+              </label>
+              <input
+                required
+                type="password"
+                value={newPatientPassword}
+                onChange={e => setNewPatientPassword(e.target.value)}
+                placeholder="••••••"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13.5,
+                  border: '1px solid var(--border-s)',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--bg)',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+                disabled={isAddingPatient}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+                Ημερομηνία Γέννησης *
+              </label>
+              <input
+                required
+                type="date"
+                value={newPatientDOB}
+                onChange={e => setNewPatientDOB(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13.5,
+                  border: '1px solid var(--border-s)',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--bg)',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+                disabled={isAddingPatient}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+                Φύλο *
+              </label>
+              <select
+                value={newPatientGender}
+                onChange={e => setNewPatientGender(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13.5,
+                  border: '1px solid var(--border-s)',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--bg)',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+                disabled={isAddingPatient}
+              >
+                <option value="male">Άνδρας</option>
+                <option value="female">Γυναίκα</option>
+                <option value="other">Άλλο / Μη δυαδικό</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+                Αριθμός Μητρώου (MRN) *
+              </label>
+              <input
+                required
+                value={newPatientMRN}
+                onChange={e => setNewPatientMRN(e.target.value)}
+                placeholder="π.χ. MRN-12345"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13.5,
+                  border: '1px solid var(--border-s)',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--bg)',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+                disabled={isAddingPatient}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+                Ομάδα Αίματος
+              </label>
+              <select
+                value={newPatientBloodType}
+                onChange={e => setNewPatientBloodType(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13.5,
+                  border: '1px solid var(--border-s)',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--bg)',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+                disabled={isAddingPatient}
+              >
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+                Επαφή Έκτακτης Ανάγκης (Όνομα)
+              </label>
+              <input
+                value={newPatientEmergencyName}
+                onChange={e => setNewPatientEmergencyName(e.target.value)}
+                placeholder="π.χ. Μαρία Παπαδοπούλου"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13.5,
+                  border: '1px solid var(--border-s)',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--bg)',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+                disabled={isAddingPatient}
+              />
+            </div>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--ink-2)', display: 'block', marginBottom: 5 }}>
+                Τηλέφωνο Επαφής Έκτακτης Ανάγκης
+              </label>
+              <input
+                value={newPatientEmergencyPhone}
+                onChange={e => setNewPatientEmergencyPhone(e.target.value)}
+                placeholder="π.χ. +30 691 2345678"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontSize: 13.5,
+                  border: '1px solid var(--border-s)',
+                  borderRadius: 'var(--r)',
+                  background: 'var(--bg)',
+                  color: 'var(--ink)',
+                  boxSizing: 'border-box',
+                }}
+                disabled={isAddingPatient}
+              />
+            </div>
+          </div>
+          {addPatientStatus && (
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 'var(--r)',
+                fontSize: 13,
+                marginBottom: 12,
+                background: addPatientStatus.success ? 'var(--green-bg)' : 'var(--red-bg)',
+                border: `1px solid ${addPatientStatus.success ? 'var(--green-bdr)' : 'var(--red-bdr)'}`,
+                color: addPatientStatus.success ? 'var(--green)' : 'var(--red)',
+              }}
+            >
+              {addPatientStatus.message}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 18 }}>
+            <button
+              type="button"
+              onClick={() => setAddPatientModalOpen(false)}
+              style={{
+                padding: '7px 16px', fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+                border: '1px solid var(--border-s)', borderRadius: 'var(--r)',
+                background: 'var(--bg)', color: 'var(--ink-2)',
+              }}
+            >
+              Ακύρωση
+            </button>
+            <button
+              type="submit"
+              disabled={isAddingPatient}
+              style={{
+                padding: '7px 18px', fontSize: 13.5, fontWeight: 600, cursor: isAddingPatient ? 'wait' : 'pointer',
+                border: '1px solid transparent', borderRadius: 'var(--r)',
+                background: 'var(--primary)', color: '#fff',
+                opacity: isAddingPatient ? 0.6 : 1,
+              }}
+            >
+              {isAddingPatient ? 'Προσθήκη…' : 'Προσθήκη Ασθενή'}
             </button>
           </div>
         </form>

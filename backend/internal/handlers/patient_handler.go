@@ -170,6 +170,52 @@ func (h *PatientHandler) ListPatients(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
+func (h *PatientHandler) UpdatePatient(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	patient, err := h.patientRepo.FindByID(uint(id))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Patient not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		}
+		return
+	}
+
+	var req dto.UpdatePatientRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format, use YYYY-MM-DD"})
+		return
+	}
+
+	patient.DateOfBirth = dob
+	patient.Gender = req.Gender
+	patient.MedicalRecordNumber = req.MedicalRecordNumber
+	patient.BloodType = req.BloodType
+	patient.EmergencyContactName = req.EmergencyContactName
+	patient.EmergencyContactPhone = req.EmergencyContactPhone
+	patient.AssignedDoctorID = req.AssignedDoctorID
+
+	if err := h.patientRepo.Update(patient); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update patient profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, mapPatientToResponse(patient))
+}
+
 func mapPatientToResponse(p *models.Patient) dto.PatientResponse {
 	resp := dto.PatientResponse{
 		ID:                    p.ID,
