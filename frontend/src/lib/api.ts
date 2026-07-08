@@ -217,10 +217,17 @@ class CardioTrackApiClient {
   }
 
   // ── Authentication Registration ──────────────────────────────────
-  async register(email: string, password: string, name: string): Promise<{ message: string }> {
-    return await this.request<{ message: string }>('/auth/register', {
+  async register(email: string, password: string, name: string): Promise<{ message: string; user_id: number; patient_id: number }> {
+    return await this.request<{ message: string; user_id: number; patient_id: number }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, name }),
+    });
+  }
+
+  async updatePatient(id: number, data: any): Promise<any> {
+    return await this.request<any>(`/patients/${id}`, {
+      method: 'PUT',
+      body: data,
     });
   }
 

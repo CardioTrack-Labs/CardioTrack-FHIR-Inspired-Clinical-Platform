@@ -49,6 +49,9 @@ func RegisterRoutes(r *gin.Engine) {
 			// Get specific patient (RBAC handled inside middleware + handler)
 			patients.GET("/:id", middleware.RequirePatientAccess(), patientHandler.GetPatient)
 
+			// Update patient profile (Admin/Cardiologist/Doctor can update)
+			patients.PUT("/:id", middleware.RequireRole("admin", "cardiologist", "doctor"), patientHandler.UpdatePatient)
+
 			// Sub-routes for clinical data (nested under specific patient)
 			patientData := patients.Group("/:id", middleware.RequirePatientAccess())
 			{
